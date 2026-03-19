@@ -110,7 +110,7 @@ export default function Index() {
         <div className="absolute inset-0">
           <img src={HERO_IMAGE} alt="Tech parts" className="w-full h-full object-cover opacity-40" />
           <div className="absolute inset-0 bg-gradient-to-r from-slate-950 via-slate-950/80 to-transparent" />
-          <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent to-transparent" />
+          <div className="absolute inset-0 from-slate-950 via-transparent to-transparent mt-[0px] mr-[0px] mb-[0px] ml-[0px] pt-[0px] pr-[0px] pb-[0px] pl-[0px] rounded-none text-[16px] font-normal text-[#FFFFFF] bg-[#00000000] opacity-100" />
         </div>
         <div className="relative container mx-auto px-4 py-24 md:py-32">
           <div className="max-w-2xl space-y-6">

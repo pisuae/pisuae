@@ -60,10 +60,10 @@ export default function Header({ cartCount = 0, onSearch }: HeaderProps) {
       <div className="container mx-auto flex h-16 items-center justify-between px-4">
         {/* Logo */}
         <Link to="/" className="flex items-center gap-2 group">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-blue-600 group-hover:bg-blue-500 transition-colors">
-            <Cpu className="h-5 w-5 text-white" />
+          <div className="flex h-9 w-9 items-center justify-center group-hover:bg-blue-500 transition-colors mt-[0px] mr-[0px] mb-[0px] ml-[0px] pt-[0px] pr-[0px] pb-[0px] pl-[0px] rounded-lg text-[16px] font-normal text-[#FFFFFF] bg-[#3B82F6] opacity-100">
+            <Cpu className="h-5 w-5 [object SVGAnimatedString] mt-[0px] mr-[0px] mb-[0px] ml-[0px] pt-[0px] pr-[0px] pb-[0px] pl-[0px] rounded-lg text-[16px] font-normal text-[#FFFFFF] bg-[#00000000] opacity-100" />
           </div>
-          <span className="text-xl font-bold text-white hidden sm:inline">
+          <span className="hidden sm:inline mt-[0px] mr-[0px] mb-[0px] ml-[0px] pt-[0px] pr-[0px] pb-[0px] pl-[0px] rounded-none text-[20px] font-bold text-[#FFFFFF] bg-[#00000000] opacity-100">
             TechParts
           </span>
         </Link>
@@ -87,7 +87,7 @@ export default function Header({ cartCount = 0, onSearch }: HeaderProps) {
           <Link to="/products">
             <Button variant="ghost" size="sm" className="text-slate-300 hover:text-white hover:bg-slate-800">
               <Package className="h-4 w-4 mr-1" />
-              <span className="hidden sm:inline">Products</span>
+              <span className="hidden sm:inline mt-[0px] mr-[0px] mb-[0px] ml-[0px] pt-[0px] pr-[0px] pb-[0px] pl-[0px] rounded-none text-[14px] font-medium text-center text-[#FFFFFF] bg-[#00000000] opacity-100">Products</span>
             </Button>
           </Link>
 
