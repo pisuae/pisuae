@@ -1,0 +1,59 @@
+{
+    "title": "products",
+    "type": "object",
+    "properties": {
+        "id": {
+            "type": "integer",
+            "description": "Primary key, auto-increment"
+        },
+        "seller_id": {
+            "type": "string",
+            "description": "Seller user ID"
+        },
+        "title": {
+            "type": "string",
+            "description": "Product title"
+        },
+        "description": {
+            "type": "string",
+            "description": "Product description"
+        },
+        "price": {
+            "type": "number",
+            "description": "Product price in USD"
+        },
+        "category": {
+            "type": "string",
+            "description": "Product category: laptop_parts, accessories, electronics"
+        },
+        "condition": {
+            "type": "string",
+            "description": "Product condition: new, used, refurbished"
+        },
+        "image_url": {
+            "type": "string",
+            "description": "Product image URL"
+        },
+        "stock": {
+            "type": "integer",
+            "description": "Available stock quantity"
+        },
+        "status": {
+            "type": "string",
+            "description": "Listing status: active, sold, inactive"
+        },
+        "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Creation timestamp"
+        }
+    },
+    "required": [
+        "id",
+        "title",
+        "price",
+        "category",
+        "condition",
+        "status"
+    ]
+}

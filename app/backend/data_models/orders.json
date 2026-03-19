@@ -1,0 +1,47 @@
+{
+    "title": "orders",
+    "type": "object",
+    "properties": {
+        "id": {
+            "type": "integer",
+            "description": "Primary key, auto-increment"
+        },
+        "user_id": {
+            "type": "string",
+            "description": "Buyer user ID"
+        },
+        "product_id": {
+            "type": "integer",
+            "description": "Product ID"
+        },
+        "seller_id": {
+            "type": "string",
+            "description": "Seller user ID"
+        },
+        "quantity": {
+            "type": "integer",
+            "description": "Quantity ordered"
+        },
+        "total_price": {
+            "type": "number",
+            "description": "Total order price"
+        },
+        "status": {
+            "type": "string",
+            "description": "Order status: pending, completed, cancelled"
+        },
+        "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Order creation timestamp"
+        }
+    },
+    "required": [
+        "id",
+        "user_id",
+        "product_id",
+        "quantity",
+        "total_price",
+        "status"
+    ]
+}

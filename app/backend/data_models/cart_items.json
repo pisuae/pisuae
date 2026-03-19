@@ -1,0 +1,33 @@
+{
+    "title": "cart_items",
+    "type": "object",
+    "properties": {
+        "id": {
+            "type": "integer",
+            "description": "Primary key, auto-increment"
+        },
+        "user_id": {
+            "type": "string",
+            "description": "User ID"
+        },
+        "product_id": {
+            "type": "integer",
+            "description": "Product ID"
+        },
+        "quantity": {
+            "type": "integer",
+            "description": "Quantity in cart"
+        },
+        "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Added to cart timestamp"
+        }
+    },
+    "required": [
+        "id",
+        "user_id",
+        "product_id",
+        "quantity"
+    ]
+}
