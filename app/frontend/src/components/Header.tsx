@@ -64,7 +64,7 @@ export default function Header({ cartCount = 0, onSearch }: HeaderProps) {
             <Cpu className="h-5 w-5 [object SVGAnimatedString] mt-[0px] mr-[0px] mb-[0px] ml-[0px] pt-[0px] pr-[0px] pb-[0px] pl-[0px] rounded-lg text-[16px] font-normal text-[#FFFFFF] bg-[#00000000] opacity-100" />
           </div>
           <span className="hidden sm:inline mt-[0px] mr-[0px] mb-[0px] ml-[0px] pt-[0px] pr-[0px] pb-[0px] pl-[0px] rounded-none text-[20px] font-bold text-[#FFFFFF] bg-[#00000000] opacity-100">
-            TechParts
+            PIS UAE
           </span>
         </Link>
 

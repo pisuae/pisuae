@@ -112,13 +112,13 @@ export default function Index() {
           <div className="absolute inset-0 bg-gradient-to-r from-slate-950 via-slate-950/80 to-transparent" />
           <div className="absolute inset-0 from-slate-950 via-transparent to-transparent mt-[0px] mr-[0px] mb-[0px] ml-[0px] pt-[0px] pr-[0px] pb-[0px] pl-[0px] rounded-none text-[16px] font-normal text-[#FFFFFF] bg-[#00000000] opacity-100" />
         </div>
-        <div className="relative container mx-auto px-4 py-24 md:py-32">
-          <div className="max-w-2xl space-y-6">
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-sm">
+        <div className="relative container mx-auto px-4 py-24 md:py-32 mt-[0px] mr-[0px] mb-[0px] ml-[0px] pt-[128px] pr-[16px] pb-[128px] pl-[16px] rounded-none text-[16px] font-normal text-[#FFFFFF] bg-[#00000000] opacity-100">
+          <div className="max-w-2xl space-y-6 mt-[0px] mr-[0px] mb-[0px] ml-[0px] pt-[0px] pr-[0px] pb-[0px] pl-[0px] rounded-none text-[16px] font-normal text-[#FFFFFF] bg-[#00000000] opacity-100">
+            <div className="inline-flex items-center gap-2 px-4 py-2 border border-blue-500/20 mt-[0px] mr-[0px] mb-[0px] ml-[0px] pt-[8px] pr-[16px] pb-[8px] pl-[16px] rounded-full text-[14px] font-normal text-[#60A5FA] bg-[#3B82F61A] opacity-100">
               <Zap className="h-4 w-4" />
               Premium Laptop Parts & Electronics
             </div>
-            <h1 className="text-4xl md:text-6xl font-bold leading-tight">
+            <h1 className="md:text-6xl mt-[24px] mr-[0px] mb-[0px] ml-[0px] pt-[0px] pr-[0px] pb-[0px] pl-[0px] rounded-none text-[60px] font-bold text-[#FFFFFF] bg-[#00000000] opacity-100">
               Find the Perfect{' '}
               <span className="bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent">
                 Parts
