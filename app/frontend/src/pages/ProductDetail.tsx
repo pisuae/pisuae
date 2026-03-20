@@ -56,6 +56,21 @@ export default function ProductDetail() {
         const url = await resolveImageUrl(prod.image_url);
         setResolvedImageSrc(url || defaultImage);
       }
+      // Track product view
+      if (prod?.seller_id) {
+        try {
+          await client.entities.product_views.create({
+            data: {
+              product_id: Number(id),
+              seller_id: prod.seller_id,
+              viewer_ip: 'web',
+              viewed_at: new Date().toISOString(),
+            },
+          });
+        } catch {
+          // Silently fail - view tracking is non-critical
+        }
+      }
     } catch (err) {
       console.error('Failed to load product:', err);
     } finally {

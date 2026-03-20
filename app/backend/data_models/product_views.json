@@ -1,0 +1,33 @@
+{
+    "title": "product_views",
+    "type": "object",
+    "properties": {
+        "id": {
+            "type": "integer",
+            "description": "Primary key, auto-increment"
+        },
+        "product_id": {
+            "type": "integer",
+            "description": "Product ID being viewed"
+        },
+        "seller_id": {
+            "type": "string",
+            "description": "Seller/vendor user ID"
+        },
+        "viewer_ip": {
+            "type": "string",
+            "description": "Viewer IP or session hash"
+        },
+        "viewed_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "When the view occurred"
+        }
+    },
+    "required": [
+        "id",
+        "product_id",
+        "seller_id",
+        "viewed_at"
+    ]
+}

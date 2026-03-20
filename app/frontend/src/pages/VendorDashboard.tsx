@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Store, Plus, Pencil, Trash2, Package, DollarSign, Percent,
-  TrendingUp, Eye, EyeOff, Upload, ImageIcon,
+  TrendingUp, Eye, EyeOff, Upload, ImageIcon, BarChart3,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -303,10 +303,20 @@ export default function VendorDashboard() {
             </div>
             <p className="text-slate-400 text-sm">Vendor Dashboard — Manage your products and track earnings</p>
           </div>
-          <Button onClick={openAddForm} className="bg-blue-600 hover:bg-blue-500 text-white">
-            <Plus className="h-4 w-4 mr-2" />
-            Add Product
-          </Button>
+          <div className="flex items-center gap-3">
+            <Button
+              variant="outline"
+              onClick={() => navigate('/vendor/analytics')}
+              className="border-slate-600 text-slate-300 hover:text-white hover:bg-slate-700"
+            >
+              <BarChart3 className="h-4 w-4 mr-2" />
+              Analytics
+            </Button>
+            <Button onClick={openAddForm} className="bg-blue-600 hover:bg-blue-500 text-white">
+              <Plus className="h-4 w-4 mr-2" />
+              Add Product
+            </Button>
+          </div>
         </div>
 
         {/* Stats Cards */}

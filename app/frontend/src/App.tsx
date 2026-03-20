@@ -9,6 +9,7 @@ import Cart from './pages/Cart';
 import Orders from './pages/Orders';
 import VendorSignup from './pages/VendorSignup';
 import VendorDashboard from './pages/VendorDashboard';
+import VendorAnalytics from './pages/VendorAnalytics';
 import AuthCallback from './pages/AuthCallback';
 import AuthError from './pages/AuthError';
 
@@ -27,6 +28,7 @@ const App = () => (
           <Route path="/orders" element={<Orders />} />
           <Route path="/vendor/signup" element={<VendorSignup />} />
           <Route path="/vendor/dashboard" element={<VendorDashboard />} />
+          <Route path="/vendor/analytics" element={<VendorAnalytics />} />
           <Route path="/auth/callback" element={<AuthCallback />} />
           <Route path="/auth/error" element={<AuthError />} />
         </Routes>
