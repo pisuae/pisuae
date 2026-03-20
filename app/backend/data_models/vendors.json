@@ -1,0 +1,50 @@
+{
+    "title": "vendors",
+    "type": "object",
+    "properties": {
+        "id": {
+            "type": "integer",
+            "description": "Primary key, auto-increment"
+        },
+        "user_id": {
+            "type": "string",
+            "description": "User ID from auth"
+        },
+        "business_name": {
+            "type": "string",
+            "description": "Vendor business name"
+        },
+        "description": {
+            "type": "string",
+            "description": "Vendor business description"
+        },
+        "commission_rate": {
+            "type": "number",
+            "description": "Platform commission percentage, e.g. 15.0 means 15%"
+        },
+        "status": {
+            "type": "string",
+            "description": "Vendor status: pending, active, suspended"
+        },
+        "total_sales": {
+            "type": "number",
+            "description": "Total sales amount"
+        },
+        "total_earnings": {
+            "type": "number",
+            "description": "Total earnings after commission"
+        },
+        "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Account creation date"
+        }
+    },
+    "required": [
+        "id",
+        "user_id",
+        "business_name",
+        "commission_rate",
+        "status"
+    ]
+}

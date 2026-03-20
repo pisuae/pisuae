@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ShoppingCart, User, LogOut, Search, Cpu, Package } from 'lucide-react';
+import { ShoppingCart, User, LogOut, Search, Cpu, Package, Store } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -8,6 +8,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { client } from '@/lib/api';
@@ -19,6 +20,7 @@ interface HeaderProps {
 
 export default function Header({ cartCount = 0, onSearch }: HeaderProps) {
   const [user, setUser] = useState<any>(null);
+  const [isVendor, setIsVendor] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const navigate = useNavigate();
 
@@ -28,6 +30,10 @@ export default function Header({ cartCount = 0, onSearch }: HeaderProps) {
         const res = await client.auth.me();
         if (res?.data) {
           setUser(res.data);
+          // Check if user is a vendor
+          const vendorRes = await client.entities.vendors.query({ query: {} });
+          const vendors = vendorRes?.data?.items || [];
+          setIsVendor(vendors.length > 0 && vendors[0].status === 'active');
         }
       } catch {
         setUser(null);
@@ -43,6 +49,7 @@ export default function Header({ cartCount = 0, onSearch }: HeaderProps) {
   const handleLogout = async () => {
     await client.auth.logout();
     setUser(null);
+    setIsVendor(false);
     navigate('/');
   };
 
@@ -91,6 +98,23 @@ export default function Header({ cartCount = 0, onSearch }: HeaderProps) {
             </Button>
           </Link>
 
+          {/* Sell on PIS UAE / Vendor Dashboard */}
+          {isVendor ? (
+            <Link to="/vendor/dashboard">
+              <Button variant="ghost" size="sm" className="text-emerald-400 hover:text-emerald-300 hover:bg-slate-800">
+                <Store className="h-4 w-4 mr-1" />
+                <span className="hidden sm:inline">Dashboard</span>
+              </Button>
+            </Link>
+          ) : (
+            <Link to="/vendor/signup">
+              <Button variant="ghost" size="sm" className="text-amber-400 hover:text-amber-300 hover:bg-slate-800">
+                <Store className="h-4 w-4 mr-1" />
+                <span className="hidden sm:inline">Sell</span>
+              </Button>
+            </Link>
+          )}
+
           <Link to="/cart" className="relative">
             <Button variant="ghost" size="icon" className="text-slate-300 hover:text-white hover:bg-slate-800">
               <ShoppingCart className="h-5 w-5" />
@@ -114,6 +138,18 @@ export default function Header({ cartCount = 0, onSearch }: HeaderProps) {
                   <Package className="h-4 w-4 mr-2" />
                   My Orders
                 </DropdownMenuItem>
+                {isVendor ? (
+                  <DropdownMenuItem onClick={() => navigate('/vendor/dashboard')} className="hover:bg-slate-700 cursor-pointer">
+                    <Store className="h-4 w-4 mr-2" />
+                    Vendor Dashboard
+                  </DropdownMenuItem>
+                ) : (
+                  <DropdownMenuItem onClick={() => navigate('/vendor/signup')} className="hover:bg-slate-700 cursor-pointer">
+                    <Store className="h-4 w-4 mr-2" />
+                    Become a Vendor
+                  </DropdownMenuItem>
+                )}
+                <DropdownMenuSeparator className="bg-slate-700" />
                 <DropdownMenuItem onClick={handleLogout} className="hover:bg-slate-700 cursor-pointer text-red-400">
                   <LogOut className="h-4 w-4 mr-2" />
                   Logout

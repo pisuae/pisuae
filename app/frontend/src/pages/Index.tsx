@@ -272,10 +272,10 @@ export default function Index() {
           <div className="flex flex-col md:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-2">
               <Cpu className="h-5 w-5 text-blue-400" />
-              <span className="font-bold text-white">TechParts</span>
+              <span className="font-bold text-white">PIS UAE</span>
             </div>
             <p className="text-sm text-slate-400">
-              © 2026 TechParts Marketplace. All rights reserved.
+              © 2026 PIS UAE Marketplace. All rights reserved.
             </p>
           </div>
         </div>
