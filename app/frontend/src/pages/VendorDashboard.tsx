@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Store, Plus, Pencil, Trash2, Package, DollarSign, Percent,
-  TrendingUp, Eye, EyeOff, X,
+  TrendingUp, Eye, EyeOff, Upload, ImageIcon,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -16,6 +16,7 @@ import {
 import { toast } from 'sonner';
 import Header from '@/components/Header';
 import { client } from '@/lib/api';
+import { resolveImageUrl, uploadProductImage } from '@/lib/image';
 
 interface Product {
   id: number;
@@ -29,6 +30,10 @@ interface Product {
   stock?: number;
   status: string;
   created_at?: string;
+}
+
+interface ProductWithResolvedImage extends Product {
+  resolved_image_url?: string | null;
 }
 
 interface Vendor {
@@ -62,13 +67,17 @@ const emptyProduct = {
 export default function VendorDashboard() {
   const [user, setUser] = useState<any>(null);
   const [vendor, setVendor] = useState<Vendor | null>(null);
-  const [products, setProducts] = useState<Product[]>([]);
+  const [products, setProducts] = useState<ProductWithResolvedImage[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [formData, setFormData] = useState(emptyProduct);
   const [submitting, setSubmitting] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null);
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -84,7 +93,6 @@ export default function VendorDashboard() {
       }
       setUser(res.data);
 
-      // Load vendor profile
       const vendorRes = await client.entities.vendors.query({ query: {} });
       const vendors = vendorRes?.data?.items || [];
       if (vendors.length === 0) {
@@ -93,13 +101,21 @@ export default function VendorDashboard() {
       }
       setVendor(vendors[0]);
 
-      // Load vendor's products using queryAll to get products where seller_id matches
       const prodRes = await client.entities.products.query({
         query: { seller_id: res.data.id },
         sort: '-created_at',
         limit: 100,
       });
-      setProducts(prodRes?.data?.items || []);
+      const items: Product[] = prodRes?.data?.items || [];
+
+      // Resolve image URLs for all products
+      const resolved = await Promise.all(
+        items.map(async (p) => {
+          const resolvedUrl = await resolveImageUrl(p.image_url);
+          return { ...p, resolved_image_url: resolvedUrl };
+        })
+      );
+      setProducts(resolved);
     } catch (err) {
       console.error('Failed to load vendor data:', err);
       toast.error('Failed to load dashboard data');
@@ -111,10 +127,12 @@ export default function VendorDashboard() {
   const openAddForm = () => {
     setEditingProduct(null);
     setFormData({ ...emptyProduct });
+    setImageFile(null);
+    setImagePreview(null);
     setShowForm(true);
   };
 
-  const openEditForm = (product: Product) => {
+  const openEditForm = async (product: ProductWithResolvedImage) => {
     setEditingProduct(product);
     setFormData({
       title: product.title,
@@ -126,7 +144,34 @@ export default function VendorDashboard() {
       stock: product.stock || 1,
       status: product.status,
     });
+    setImageFile(null);
+    setImagePreview(product.resolved_image_url || null);
     setShowForm(true);
+  };
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please select an image file');
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Image must be smaller than 5MB');
+      return;
+    }
+
+    setImageFile(file);
+    // Create preview
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      setImagePreview(ev.target?.result as string);
+    };
+    reader.readAsDataURL(file);
   };
 
   const handleSubmitProduct = async (e: React.FormEvent) => {
@@ -136,9 +181,25 @@ export default function VendorDashboard() {
       return;
     }
     setSubmitting(true);
+
     try {
+      let imageUrlToSave = formData.image_url;
+
+      // Upload image if a new file was selected
+      if (imageFile) {
+        setUploading(true);
+        const objectKey = await uploadProductImage(imageFile);
+        if (!objectKey) {
+          toast.error('Failed to upload image. Please try again.');
+          setSubmitting(false);
+          setUploading(false);
+          return;
+        }
+        imageUrlToSave = objectKey;
+        setUploading(false);
+      }
+
       if (editingProduct) {
-        // Update existing product
         await client.entities.products.update({
           id: editingProduct.id,
           data: {
@@ -147,14 +208,13 @@ export default function VendorDashboard() {
             price: Number(formData.price),
             category: formData.category,
             condition: formData.condition,
-            image_url: formData.image_url.trim(),
+            image_url: imageUrlToSave,
             stock: Number(formData.stock),
             status: formData.status,
           },
         });
         toast.success('Product updated successfully!');
       } else {
-        // Create new product
         await client.entities.products.create({
           data: {
             seller_id: user.id,
@@ -163,7 +223,7 @@ export default function VendorDashboard() {
             price: Number(formData.price),
             category: formData.category,
             condition: formData.condition,
-            image_url: formData.image_url.trim(),
+            image_url: imageUrlToSave,
             stock: Number(formData.stock),
             status: formData.status,
             created_at: new Date().toISOString(),
@@ -172,12 +232,15 @@ export default function VendorDashboard() {
         toast.success('Product created successfully!');
       }
       setShowForm(false);
+      setImageFile(null);
+      setImagePreview(null);
       loadData();
     } catch (err) {
       console.error('Failed to save product:', err);
       toast.error('Failed to save product');
     } finally {
       setSubmitting(false);
+      setUploading(false);
     }
   };
 
@@ -220,7 +283,6 @@ export default function VendorDashboard() {
   }
 
   const activeProducts = products.filter((p) => p.status === 'active').length;
-  const totalRevenue = products.reduce((sum, p) => sum + (p.price * (p.stock || 0)), 0);
   const commissionRate = vendor?.commission_rate || 15;
   const netEarnings = vendor?.total_earnings || 0;
 
@@ -350,9 +412,9 @@ export default function VendorDashboard() {
                         <tr key={product.id} className="border-b border-slate-700/50 hover:bg-slate-700/20 transition-colors">
                           <td className="py-3 px-4">
                             <div className="flex items-center gap-3">
-                              {product.image_url ? (
+                              {product.resolved_image_url ? (
                                 <img
-                                  src={product.image_url}
+                                  src={product.resolved_image_url}
                                   alt={product.title}
                                   className="h-10 w-10 rounded-lg object-cover bg-slate-700"
                                 />
@@ -420,8 +482,14 @@ export default function VendorDashboard() {
       </div>
 
       {/* Add/Edit Product Dialog */}
-      <Dialog open={showForm} onOpenChange={setShowForm}>
-        <DialogContent className="bg-slate-800 border-slate-700 text-white max-w-lg">
+      <Dialog open={showForm} onOpenChange={(open) => {
+        if (!open) {
+          setImageFile(null);
+          setImagePreview(null);
+        }
+        setShowForm(open);
+      }}>
+        <DialogContent className="bg-slate-800 border-slate-700 text-white max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-white">
               {editingProduct ? 'Edit Product' : 'Add New Product'}
@@ -510,16 +578,72 @@ export default function VendorDashboard() {
                 </Select>
               </div>
             </div>
+
+            {/* Image Upload Section */}
             <div>
-              <label className="block text-sm font-medium text-slate-300 mb-1">Image URL</label>
-              <Input
-                type="url"
-                value={formData.image_url}
-                onChange={(e) => setFormData({ ...formData, image_url: e.target.value })}
-                placeholder="https://example.com/image.jpg"
-                className="bg-slate-900 border-slate-600 text-white placeholder:text-slate-500"
+              <label className="block text-sm font-medium text-slate-300 mb-2">Product Image</label>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleFileSelect}
+                className="hidden"
               />
+              
+              {imagePreview ? (
+                <div className="relative group">
+                  <img
+                    src={imagePreview}
+                    alt="Preview"
+                    className="w-full h-48 object-cover rounded-lg border border-slate-600"
+                  />
+                  <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center gap-3">
+                    <Button
+                      type="button"
+                      size="sm"
+                      onClick={() => fileInputRef.current?.click()}
+                      className="bg-blue-600 hover:bg-blue-500 text-white"
+                    >
+                      <Upload className="h-4 w-4 mr-1" />
+                      Replace
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        setImageFile(null);
+                        setImagePreview(null);
+                        setFormData({ ...formData, image_url: '' });
+                      }}
+                      className="border-slate-500 text-white hover:bg-slate-700"
+                    >
+                      Remove
+                    </Button>
+                  </div>
+                  {imageFile && (
+                    <div className="absolute bottom-2 left-2 bg-black/70 text-xs text-slate-300 px-2 py-1 rounded">
+                      {imageFile.name} ({(imageFile.size / 1024).toFixed(0)} KB)
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="w-full h-48 border-2 border-dashed border-slate-600 rounded-lg flex flex-col items-center justify-center gap-3 hover:border-blue-500/50 hover:bg-slate-900/50 transition-colors cursor-pointer"
+                >
+                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-slate-700">
+                    <ImageIcon className="h-6 w-6 text-slate-400" />
+                  </div>
+                  <div className="text-center">
+                    <p className="text-sm text-slate-300 font-medium">Click to upload image</p>
+                    <p className="text-xs text-slate-500 mt-1">PNG, JPG, WEBP up to 5MB</p>
+                  </div>
+                </button>
+              )}
             </div>
+
             {formData.price > 0 && (
               <div className="bg-slate-900/50 border border-slate-700 rounded-lg p-3">
                 <div className="flex justify-between text-sm">
@@ -542,8 +666,19 @@ export default function VendorDashboard() {
               <Button type="button" variant="ghost" onClick={() => setShowForm(false)} className="text-slate-400 hover:text-white">
                 Cancel
               </Button>
-              <Button type="submit" disabled={submitting} className="bg-blue-600 hover:bg-blue-500 text-white">
-                {submitting ? 'Saving...' : editingProduct ? 'Update Product' : 'Add Product'}
+              <Button type="submit" disabled={submitting || uploading} className="bg-blue-600 hover:bg-blue-500 text-white">
+                {uploading ? (
+                  <span className="flex items-center gap-2">
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
+                    Uploading Image...
+                  </span>
+                ) : submitting ? (
+                  'Saving...'
+                ) : editingProduct ? (
+                  'Update Product'
+                ) : (
+                  'Add Product'
+                )}
               </Button>
             </DialogFooter>
           </form>

@@ -1,8 +1,10 @@
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { ShoppingCart, Tag } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
+import { resolveImageUrl } from '@/lib/image';
 
 interface Product {
   id: number;
@@ -31,14 +33,27 @@ const conditionColors: Record<string, string> = {
 const defaultImage = 'https://mgx-backend-cdn.metadl.com/generate/images/1040407/2026-03-18/c1384985-4f46-41a1-af84-fd758bd4107a.png';
 
 export default function ProductCard({ product, onAddToCart }: ProductCardProps) {
+  const [resolvedSrc, setResolvedSrc] = useState<string>(defaultImage);
   const isOutOfStock = product.stock !== undefined && product.stock <= 0;
+
+  useEffect(() => {
+    let cancelled = false;
+    const resolve = async () => {
+      const url = await resolveImageUrl(product.image_url);
+      if (!cancelled) {
+        setResolvedSrc(url || defaultImage);
+      }
+    };
+    resolve();
+    return () => { cancelled = true; };
+  }, [product.image_url]);
 
   return (
     <Card className="group bg-slate-800/80 border-slate-700/50 hover:border-blue-500/50 transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-blue-500/10 overflow-hidden">
       <Link to={`/products/${product.id}`}>
         <div className="relative aspect-[4/3] overflow-hidden bg-slate-900">
           <img
-            src={product.image_url || defaultImage}
+            src={resolvedSrc}
             alt={product.title}
             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
             onError={(e) => {

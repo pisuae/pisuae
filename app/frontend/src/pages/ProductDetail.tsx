@@ -7,6 +7,7 @@ import { Separator } from '@/components/ui/separator';
 import { toast } from 'sonner';
 import Header from '@/components/Header';
 import { client } from '@/lib/api';
+import { resolveImageUrl } from '@/lib/image';
 
 interface Product {
   id: number;
@@ -34,6 +35,7 @@ export default function ProductDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [product, setProduct] = useState<Product | null>(null);
+  const [resolvedImageSrc, setResolvedImageSrc] = useState<string>(defaultImage);
   const [loading, setLoading] = useState(true);
   const [adding, setAdding] = useState(false);
   const [cartCount, setCartCount] = useState(0);
@@ -48,7 +50,12 @@ export default function ProductDetail() {
     if (!id) return;
     try {
       const res = await client.entities.products.get({ id });
-      setProduct(res?.data || null);
+      const prod = res?.data || null;
+      setProduct(prod);
+      if (prod?.image_url) {
+        const url = await resolveImageUrl(prod.image_url);
+        setResolvedImageSrc(url || defaultImage);
+      }
     } catch (err) {
       console.error('Failed to load product:', err);
     } finally {
@@ -164,7 +171,7 @@ export default function ProductDetail() {
           {/* Product Image */}
           <div className="relative rounded-xl overflow-hidden bg-slate-900 border border-slate-800">
             <img
-              src={product.image_url || defaultImage}
+              src={resolvedImageSrc}
               alt={product.title}
               className="w-full aspect-square object-cover"
               onError={(e) => {
