@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { User, Mail, Save, ArrowLeft, Bell, Moon, Sun, Globe, Newspaper, Check, Package, ArrowRight, DollarSign, TrendingUp, ShoppingBag } from 'lucide-react';
+import { User, Mail, Save, ArrowLeft, Bell, Moon, Sun, Globe, Newspaper, Check, Package, ArrowRight, DollarSign, TrendingUp, ShoppingBag, BarChart3 } from 'lucide-react';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -65,6 +66,7 @@ export default function Profile() {
   const [user, setUser] = useState<UserProfile | null>(null);
   const [preferences, setPreferences] = useState<UserPreferences>(DEFAULT_PREFERENCES);
   const [recentOrders, setRecentOrders] = useState<Order[]>([]);
+  const [allOrders, setAllOrders] = useState<Order[]>([]);
   const [spendingStats, setSpendingStats] = useState({ totalSpent: 0, orderCount: 0, avgOrder: 0 });
   const [ordersLoading, setOrdersLoading] = useState(true);
   const [loading, setLoading] = useState(true);
@@ -85,13 +87,14 @@ export default function Profile() {
         sort: '-created_at',
         limit: 100,
       });
-      const allOrders: Order[] = allRes?.data?.items || [];
+      const fetchedOrders: Order[] = allRes?.data?.items || [];
+      setAllOrders(fetchedOrders);
 
       // Set recent 3 orders
-      setRecentOrders(allOrders.slice(0, 3));
+      setRecentOrders(fetchedOrders.slice(0, 3));
 
       // Compute spending stats (exclude cancelled orders)
-      const validOrders = allOrders.filter((o) => o.status?.toLowerCase() !== 'cancelled');
+      const validOrders = fetchedOrders.filter((o) => o.status?.toLowerCase() !== 'cancelled');
       const totalSpent = validOrders.reduce((sum, o) => sum + Number(o.total_amount || 0), 0);
       const orderCount = validOrders.length;
       const avgOrder = orderCount > 0 ? totalSpent / orderCount : 0;
@@ -209,6 +212,37 @@ export default function Profile() {
     if (email) return email.slice(0, 2).toUpperCase();
     return 'U';
   };
+
+  const monthlySpending = useMemo(() => {
+    const now = new Date();
+    const months: { key: string; label: string; amount: number }[] = [];
+
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      const label = d.toLocaleDateString('en-US', { month: 'short' });
+      months.push({ key, label, amount: 0 });
+    }
+
+    const validOrders = allOrders.filter((o) => o.status?.toLowerCase() !== 'cancelled');
+    for (const order of validOrders) {
+      try {
+        const date = new Date(order.created_at);
+        const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+        const month = months.find((m) => m.key === key);
+        if (month) {
+          month.amount += Number(order.total_amount || 0);
+        }
+      } catch {
+        // skip invalid dates
+      }
+    }
+
+    return months.map((m) => ({
+      name: m.label,
+      amount: Math.round(m.amount * 100) / 100,
+    }));
+  }, [allOrders]);
 
   if (loading) {
     return (
@@ -335,6 +369,63 @@ export default function Profile() {
             </CardContent>
           </Card>
         </div>
+
+        {/* Monthly Spending Trend */}
+        <Card className="bg-slate-900 border-slate-700 mb-6">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-white flex items-center gap-2 text-base">
+              <BarChart3 className="h-5 w-5 text-cyan-400" />
+              Monthly Spending
+            </CardTitle>
+            <CardDescription className="text-slate-400">
+              Last 6 months spending trend
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {ordersLoading ? (
+              <div className="flex justify-center py-8">
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500" />
+              </div>
+            ) : (
+              <div className="h-40 w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={monthlySpending} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#334155" vertical={false} />
+                    <XAxis
+                      dataKey="name"
+                      tick={{ fill: '#94a3b8', fontSize: 12 }}
+                      axisLine={{ stroke: '#475569' }}
+                      tickLine={false}
+                    />
+                    <YAxis
+                      tick={{ fill: '#94a3b8', fontSize: 11 }}
+                      axisLine={false}
+                      tickLine={false}
+                      tickFormatter={(v: number) => (v >= 1000 ? `${(v / 1000).toFixed(0)}k` : String(v))}
+                    />
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: '#1e293b',
+                        border: '1px solid #475569',
+                        borderRadius: '8px',
+                        color: '#f1f5f9',
+                        fontSize: '13px',
+                      }}
+                      formatter={(value: number) => [`AED ${value.toFixed(2)}`, 'Spent']}
+                      cursor={{ fill: 'rgba(148, 163, 184, 0.1)' }}
+                    />
+                    <Bar
+                      dataKey="amount"
+                      fill="#06b6d4"
+                      radius={[4, 4, 0, 0]}
+                      maxBarSize={40}
+                    />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
         {/* Display Name */}
         <Card className="bg-slate-900 border-slate-700 mb-6">
