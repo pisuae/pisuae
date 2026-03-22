@@ -106,7 +106,9 @@ export default function Profile() {
           query: {},
           sort: '-created_at',
           limit: 100,
-        })
+        }),
+        3,
+        2000
       );
       const fetchedOrders: Order[] = allRes?.data?.items || [];
       setAllOrders(fetchedOrders);
@@ -172,10 +174,12 @@ export default function Profile() {
         // Load avatar download URL if avatar_url (object_key) exists
         if (pref.avatar_url) {
           try {
-            const dlRes = await client.storage.getDownloadUrl({
-              bucket_name: BUCKET_NAME,
-              object_key: pref.avatar_url,
-            });
+            const dlRes = await withRetry(() =>
+              client.storage.getDownloadUrl({
+                bucket_name: BUCKET_NAME,
+                object_key: pref.avatar_url,
+              })
+            );
             if (dlRes?.data?.download_url) {
               setAvatarPreview(dlRes.data.download_url);
             }
@@ -267,11 +271,13 @@ export default function Profile() {
       const objectKey = `avatars/${user?.id || 'unknown'}_${Date.now()}.${ext}`;
 
       // Upload using web-sdk
-      const uploadRes = await client.storage.upload({
-        bucket_name: BUCKET_NAME,
-        object_key: objectKey,
-        file,
-      });
+      const uploadRes = await withRetry(() =>
+        client.storage.upload({
+          bucket_name: BUCKET_NAME,
+          object_key: objectKey,
+          file,
+        })
+      );
 
       if (uploadRes) {
         // Save the object_key to user_preferences
@@ -309,10 +315,12 @@ export default function Profile() {
         setPreferences((prev) => ({ ...prev, avatar_url: objectKey }));
 
         // Get download URL for preview
-        const dlRes = await client.storage.getDownloadUrl({
-          bucket_name: BUCKET_NAME,
-          object_key: objectKey,
-        });
+        const dlRes = await withRetry(() =>
+          client.storage.getDownloadUrl({
+            bucket_name: BUCKET_NAME,
+            object_key: objectKey,
+          })
+        );
         if (dlRes?.data?.download_url) {
           setAvatarPreview(dlRes.data.download_url);
         }

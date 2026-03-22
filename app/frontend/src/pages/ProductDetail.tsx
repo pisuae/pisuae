@@ -178,14 +178,16 @@ export default function ProductDetail() {
       // Track product view
       if (prod?.seller_id) {
         try {
-          await client.entities.product_views.create({
-            data: {
-              product_id: Number(id),
-              seller_id: prod.seller_id,
-              viewer_ip: 'web',
-              viewed_at: new Date().toISOString(),
-            },
-          });
+          await withRetry(() =>
+            client.entities.product_views.create({
+              data: {
+                product_id: Number(id),
+                seller_id: prod.seller_id,
+                viewer_ip: 'web',
+                viewed_at: new Date().toISOString(),
+              },
+            })
+          );
         } catch {
           // Silently fail - view tracking is non-critical
         }

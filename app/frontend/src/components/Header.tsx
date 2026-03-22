@@ -12,6 +12,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { client } from '@/lib/api';
+import { withRetry } from '@/lib/retry';
 
 interface HeaderProps {
   cartCount?: number;
@@ -27,11 +28,11 @@ export default function Header({ cartCount = 0, onSearch }: HeaderProps) {
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        const res = await client.auth.me();
+        const res = await withRetry(() => client.auth.me());
         if (res?.data) {
           setUser(res.data);
           // Check if user is a vendor
-          const vendorRes = await client.entities.vendors.query({ query: {} });
+          const vendorRes = await withRetry(() => client.entities.vendors.query({ query: {} }));
           const vendors = vendorRes?.data?.items || [];
           setIsVendor(vendors.length > 0 && vendors[0].status === 'active');
         }
