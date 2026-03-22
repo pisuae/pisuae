@@ -22,7 +22,7 @@ interface Product {
   status: string;
 }
 
-const allCategories = ['all', 'motherboards', 'storage', 'displays', 'batteries', 'memory', 'keyboards', 'processors', 'cooling', 'chargers', 'accessories'];
+const allCategories = ['all', 'laptops', 'motherboards', 'storage', 'displays', 'batteries', 'memory', 'keyboards', 'processors', 'cooling', 'chargers', 'accessories'];
 const allConditions = ['all', 'new', 'like-new', 'refurbished', 'used'];
 const sortOptions = [
   { value: '-created_at', label: 'Newest First' },

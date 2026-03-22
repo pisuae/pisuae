@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ArrowRight, Cpu, HardDrive, Monitor, Battery, MemoryStick, Keyboard, Zap, Shield, Truck } from 'lucide-react';
+import { ArrowRight, Cpu, HardDrive, Monitor, Battery, MemoryStick, Keyboard, Zap, Shield, Truck, Laptop } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { toast } from 'sonner';
@@ -25,6 +25,7 @@ interface Product {
 }
 
 const categories = [
+  { name: 'Laptops', icon: Laptop, color: 'from-indigo-500 to-indigo-700' },
   { name: 'Motherboards', icon: Cpu, color: 'from-blue-500 to-blue-700' },
   { name: 'Storage', icon: HardDrive, color: 'from-emerald-500 to-emerald-700' },
   { name: 'Displays', icon: Monitor, color: 'from-purple-500 to-purple-700' },
