@@ -1,7 +1,9 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { User, Mail, Save, ArrowLeft, Bell, Moon, Sun, Globe, Newspaper, Check, Package, ArrowRight, DollarSign, TrendingUp, ShoppingBag, BarChart3, Download } from 'lucide-react';
+import { User, Mail, Save, ArrowLeft, Bell, Moon, Sun, Globe, Newspaper, Check, Package, ArrowRight, DollarSign, TrendingUp, ShoppingBag, BarChart3, Download, CalendarIcon } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
+import { format, startOfMonth, eachMonthOfInterval, isWithinInterval } from 'date-fns';
+import { DateRange } from 'react-day-picker';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -11,6 +13,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import Header from '@/components/Header';
 import { client } from '@/lib/api';
@@ -72,6 +77,13 @@ export default function Profile() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
+  const [dateRange, setDateRange] = useState<DateRange | undefined>(() => {
+    const now = new Date();
+    return {
+      from: new Date(now.getFullYear(), now.getMonth() - 5, 1),
+      to: now,
+    };
+  });
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -213,16 +225,20 @@ export default function Profile() {
     return 'U';
   };
 
-  const monthlySpending = useMemo(() => {
-    const now = new Date();
-    const months: { key: string; label: string; amount: number }[] = [];
+  const rangeFrom = dateRange?.from;
+  const rangeTo = dateRange?.to;
 
-    for (let i = 5; i >= 0; i--) {
-      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-      const label = d.toLocaleDateString('en-US', { month: 'short' });
-      months.push({ key, label, amount: 0 });
-    }
+  const monthlySpending = useMemo(() => {
+    const from = rangeFrom || new Date(new Date().getFullYear(), new Date().getMonth() - 5, 1);
+    const to = rangeTo || new Date();
+
+    const monthStarts = eachMonthOfInterval({ start: startOfMonth(from), end: startOfMonth(to) });
+
+    const months = monthStarts.map((d) => ({
+      key: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`,
+      label: format(d, 'MMM yy'),
+      amount: 0,
+    }));
 
     const validOrders = allOrders.filter((o) => o.status?.toLowerCase() !== 'cancelled');
     for (const order of validOrders) {
@@ -242,22 +258,23 @@ export default function Profile() {
       name: m.label,
       amount: Math.round(m.amount * 100) / 100,
     }));
-  }, [allOrders]);
+  }, [allOrders, rangeFrom, rangeTo]);
 
   const exportSpendingCSV = () => {
-    const now = new Date();
-    const sixMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 5, 1);
+    const from = rangeFrom || new Date(new Date().getFullYear(), new Date().getMonth() - 5, 1);
+    const to = rangeTo || new Date();
 
     const ordersInRange = allOrders.filter((o) => {
       try {
-        return new Date(o.created_at) >= sixMonthsAgo;
+        const d = new Date(o.created_at);
+        return isWithinInterval(d, { start: startOfMonth(from), end: to });
       } catch {
         return false;
       }
     });
 
     if (ordersInRange.length === 0) {
-      toast.info('No orders in the last 6 months to export');
+      toast.info('No orders in the selected period to export');
       return;
     }
 
@@ -277,7 +294,8 @@ export default function Profile() {
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `spending-report-${now.toISOString().slice(0, 10)}.csv`;
+    const dateLabel = `${format(from, 'yyyy-MM-dd')}_to_${format(to, 'yyyy-MM-dd')}`;
+    link.download = `spending-report-${dateLabel}.csv`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -414,13 +432,49 @@ export default function Profile() {
         {/* Monthly Spending Trend */}
         <Card className="bg-slate-900 border-slate-700 mb-6">
           <CardHeader className="pb-2">
-            <CardTitle className="text-white flex items-center gap-2 text-base">
-              <BarChart3 className="h-5 w-5 text-cyan-400" />
-              Monthly Spending
-            </CardTitle>
-            <CardDescription className="text-slate-400">
-              Last 6 months spending trend
-            </CardDescription>
+            <div className="flex items-start justify-between gap-4 flex-wrap">
+              <div>
+                <CardTitle className="text-white flex items-center gap-2 text-base">
+                  <BarChart3 className="h-5 w-5 text-cyan-400" />
+                  Monthly Spending
+                </CardTitle>
+                <CardDescription className="text-slate-400 mt-1">
+                  {dateRange?.from && dateRange?.to
+                    ? `${format(dateRange.from, 'MMM d, yyyy')} – ${format(dateRange.to, 'MMM d, yyyy')}`
+                    : 'Select a date range'}
+                </CardDescription>
+              </div>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className={cn(
+                      'border-slate-600 text-slate-300 hover:text-white hover:bg-slate-800 hover:border-slate-500 shrink-0',
+                      !dateRange && 'text-slate-500'
+                    )}
+                  >
+                    <CalendarIcon className="h-4 w-4 mr-2" />
+                    {dateRange?.from
+                      ? dateRange.to
+                        ? `${format(dateRange.from, 'MMM d')} – ${format(dateRange.to, 'MMM d')}`
+                        : format(dateRange.from, 'MMM d, yyyy')
+                      : 'Pick dates'}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0 bg-slate-800 border-slate-600" align="end">
+                  <Calendar
+                    mode="range"
+                    defaultMonth={dateRange?.from}
+                    selected={dateRange}
+                    onSelect={setDateRange}
+                    numberOfMonths={2}
+                    disabled={{ after: new Date() }}
+                    className="text-white"
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
           </CardHeader>
           <CardContent>
             {ordersLoading ? (
