@@ -31,6 +31,11 @@ const sortOptions = [
   { value: 'title', label: 'Name: A-Z' },
 ];
 
+interface RatingInfo {
+  average_rating: number;
+  review_count: number;
+}
+
 export default function Products() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [products, setProducts] = useState<Product[]>([]);
@@ -41,6 +46,7 @@ export default function Products() {
   const [selectedCondition, setSelectedCondition] = useState('all');
   const [sortBy, setSortBy] = useState('-created_at');
   const [showFilters, setShowFilters] = useState(false);
+  const [ratings, setRatings] = useState<Record<number, RatingInfo>>({});
 
   useEffect(() => {
     loadProducts();
@@ -49,6 +55,28 @@ export default function Products() {
   useEffect(() => {
     loadCartCount();
   }, []);
+
+  const loadBulkRatings = async (productIds: number[]) => {
+    if (productIds.length === 0) return;
+    try {
+      const res = await client.apiCall.invoke({
+        url: '/api/v1/reviews/ratings/bulk',
+        method: 'GET',
+        data: { product_ids: productIds.join(',') },
+      });
+      const items = res?.data?.ratings || [];
+      const map: Record<number, RatingInfo> = {};
+      for (const item of items) {
+        map[item.product_id] = {
+          average_rating: item.average_rating,
+          review_count: item.review_count,
+        };
+      }
+      setRatings(map);
+    } catch (err) {
+      console.error('Failed to load ratings:', err);
+    }
+  };
 
   const loadProducts = async () => {
     setLoading(true);
@@ -77,6 +105,9 @@ export default function Products() {
         );
       }
       setProducts(items);
+      // Load ratings for all products
+      const ids = items.map((p: Product) => p.id);
+      loadBulkRatings(ids);
     } catch (err) {
       console.error('Failed to load products:', err);
     } finally {
@@ -259,7 +290,7 @@ export default function Products() {
             ) : products.length > 0 ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                 {products.map((product) => (
-                  <ProductCard key={product.id} product={product} onAddToCart={handleAddToCart} />
+                  <ProductCard key={product.id} product={product} onAddToCart={handleAddToCart} rating={ratings[product.id]} />
                 ))}
               </div>
             ) : (

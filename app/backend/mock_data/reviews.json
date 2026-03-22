@@ -1,0 +1,138 @@
+[
+    {
+        "product_id": 1,
+        "rating": 5,
+        "review_text": "Excellent gaming laptop! The RTX 4070 handles everything I throw at it. RGB keyboard is gorgeous.",
+        "reviewer_name": "GamerPro99",
+        "user_id": "sample-user-1",
+        "created_at": "2026-03-20 14:30:00"
+    },
+    {
+        "product_id": 1,
+        "rating": 4,
+        "review_text": "Great performance but runs a bit hot under heavy load. Overall very satisfied.",
+        "reviewer_name": "TechReviewer",
+        "user_id": "sample-user-2",
+        "created_at": "2026-03-21 09:15:00"
+    },
+    {
+        "product_id": 2,
+        "rating": 5,
+        "review_text": "The OLED display is absolutely stunning. Perfect for photo editing and productivity.",
+        "reviewer_name": "DesignPro",
+        "user_id": "sample-user-3",
+        "created_at": "2026-03-20 16:45:00"
+    },
+    {
+        "product_id": 2,
+        "rating": 4,
+        "review_text": "Lightweight and portable. Battery life could be better though.",
+        "reviewer_name": "RoadWarrior",
+        "user_id": "sample-user-4",
+        "created_at": "2026-03-21 11:20:00"
+    },
+    {
+        "product_id": 3,
+        "rating": 4,
+        "review_text": "Solid gaming laptop for the price. The 165Hz display is smooth.",
+        "reviewer_name": "BudgetGamer",
+        "user_id": "sample-user-5",
+        "created_at": "2026-03-19 08:00:00"
+    },
+    {
+        "product_id": 4,
+        "rating": 5,
+        "review_text": "Best ultrabook I've ever owned. The OLED screen is incredible for the price.",
+        "reviewer_name": "UltrabookFan",
+        "user_id": "sample-user-6",
+        "created_at": "2026-03-20 10:30:00"
+    },
+    {
+        "product_id": 5,
+        "rating": 5,
+        "review_text": "M4 Pro is a beast. Compiles code in seconds. Best investment for development.",
+        "reviewer_name": "DevMaster",
+        "user_id": "sample-user-1",
+        "created_at": "2026-03-18 15:00:00"
+    },
+    {
+        "product_id": 5,
+        "rating": 5,
+        "review_text": "Battery life is insane. 20+ hours on a single charge. Display is gorgeous.",
+        "reviewer_name": "MacLover",
+        "user_id": "sample-user-2",
+        "created_at": "2026-03-19 12:00:00"
+    },
+    {
+        "product_id": 5,
+        "rating": 4,
+        "review_text": "Amazing machine but the price is steep. Worth it if you need the power.",
+        "reviewer_name": "ProUser",
+        "user_id": "sample-user-3",
+        "created_at": "2026-03-20 09:00:00"
+    },
+    {
+        "product_id": 6,
+        "rating": 4,
+        "review_text": "Love the thin design. Perfect for students and light work.",
+        "reviewer_name": "StudentLife",
+        "user_id": "sample-user-4",
+        "created_at": "2026-03-21 14:00:00"
+    },
+    {
+        "product_id": 7,
+        "rating": 5,
+        "review_text": "The keyboard is legendary. Best typing experience on any laptop.",
+        "reviewer_name": "WriterPro",
+        "user_id": "sample-user-5",
+        "created_at": "2026-03-19 16:30:00"
+    },
+    {
+        "product_id": 7,
+        "rating": 4,
+        "review_text": "Rock solid build quality. MIL-STD certified and it shows.",
+        "reviewer_name": "BusinessUser",
+        "user_id": "sample-user-6",
+        "created_at": "2026-03-20 11:45:00"
+    },
+    {
+        "product_id": 8,
+        "rating": 5,
+        "review_text": "The 2-in-1 form factor is perfect for note-taking and presentations.",
+        "reviewer_name": "FlexUser",
+        "user_id": "sample-user-1",
+        "created_at": "2026-03-21 08:30:00"
+    },
+    {
+        "product_id": 9,
+        "rating": 5,
+        "review_text": "InfinityEdge display is breathtaking. Build quality is premium.",
+        "reviewer_name": "DesignLover",
+        "user_id": "sample-user-2",
+        "created_at": "2026-03-20 13:00:00"
+    },
+    {
+        "product_id": 9,
+        "rating": 4,
+        "review_text": "Great laptop but wish it had more ports. Need a dongle for everything.",
+        "reviewer_name": "PortHunter",
+        "user_id": "sample-user-3",
+        "created_at": "2026-03-21 10:00:00"
+    },
+    {
+        "product_id": 10,
+        "rating": 4,
+        "review_text": "Excellent value for money. Does everything I need for work and entertainment.",
+        "reviewer_name": "ValueSeeker",
+        "user_id": "sample-user-4",
+        "created_at": "2026-03-19 14:00:00"
+    },
+    {
+        "product_id": 10,
+        "rating": 3,
+        "review_text": "Good laptop but the build feels a bit plasticky compared to XPS line.",
+        "reviewer_name": "QualityCheck",
+        "user_id": "sample-user-5",
+        "created_at": "2026-03-20 17:00:00"
+    }
+]

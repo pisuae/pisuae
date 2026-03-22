@@ -34,16 +34,44 @@ const categories = [
   { name: 'Keyboards', icon: Keyboard, color: 'from-cyan-500 to-cyan-700' },
 ];
 
+interface RatingInfo {
+  average_rating: number;
+  review_count: number;
+}
+
 export default function Index() {
   const [featuredProducts, setFeaturedProducts] = useState<Product[]>([]);
   const [cartCount, setCartCount] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [ratings, setRatings] = useState<Record<number, RatingInfo>>({});
   const navigate = useNavigate();
 
   useEffect(() => {
     loadFeaturedProducts();
     loadCartCount();
   }, []);
+
+  const loadBulkRatings = async (productIds: number[]) => {
+    if (productIds.length === 0) return;
+    try {
+      const res = await client.apiCall.invoke({
+        url: '/api/v1/reviews/ratings/bulk',
+        method: 'GET',
+        data: { product_ids: productIds.join(',') },
+      });
+      const items = res?.data?.ratings || [];
+      const map: Record<number, RatingInfo> = {};
+      for (const item of items) {
+        map[item.product_id] = {
+          average_rating: item.average_rating,
+          review_count: item.review_count,
+        };
+      }
+      setRatings(map);
+    } catch (err) {
+      console.error('Failed to load ratings:', err);
+    }
+  };
 
   const loadFeaturedProducts = async () => {
     try {
@@ -52,7 +80,10 @@ export default function Index() {
         limit: 8,
         sort: '-created_at',
       });
-      setFeaturedProducts(res?.data?.items || []);
+      const items = res?.data?.items || [];
+      setFeaturedProducts(items);
+      const ids = items.map((p: Product) => p.id);
+      loadBulkRatings(ids);
     } catch (err) {
       console.error('Failed to load products:', err);
     } finally {
@@ -233,7 +264,7 @@ export default function Index() {
         ) : featuredProducts.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
             {featuredProducts.map((product) => (
-              <ProductCard key={product.id} product={product} onAddToCart={handleAddToCart} />
+              <ProductCard key={product.id} product={product} onAddToCart={handleAddToCart} rating={ratings[product.id]} />
             ))}
           </div>
         ) : (
