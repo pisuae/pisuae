@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { User, Mail, Save, ArrowLeft, Bell, Moon, Sun, Globe, Newspaper, Check, Package, ArrowRight } from 'lucide-react';
+import { User, Mail, Save, ArrowLeft, Bell, Moon, Sun, Globe, Newspaper, Check, Package, ArrowRight, DollarSign, TrendingUp, ShoppingBag } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -65,6 +65,7 @@ export default function Profile() {
   const [user, setUser] = useState<UserProfile | null>(null);
   const [preferences, setPreferences] = useState<UserPreferences>(DEFAULT_PREFERENCES);
   const [recentOrders, setRecentOrders] = useState<Order[]>([]);
+  const [spendingStats, setSpendingStats] = useState({ totalSpent: 0, orderCount: 0, avgOrder: 0 });
   const [ordersLoading, setOrdersLoading] = useState(true);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -78,12 +79,23 @@ export default function Profile() {
 
   const loadRecentOrders = async () => {
     try {
-      const res = await client.entities.orders.query({
+      // Fetch all orders for spending stats
+      const allRes = await client.entities.orders.query({
         query: {},
         sort: '-created_at',
-        limit: 3,
+        limit: 100,
       });
-      setRecentOrders(res?.data?.items || []);
+      const allOrders: Order[] = allRes?.data?.items || [];
+
+      // Set recent 3 orders
+      setRecentOrders(allOrders.slice(0, 3));
+
+      // Compute spending stats (exclude cancelled orders)
+      const validOrders = allOrders.filter((o) => o.status?.toLowerCase() !== 'cancelled');
+      const totalSpent = validOrders.reduce((sum, o) => sum + Number(o.total_amount || 0), 0);
+      const orderCount = validOrders.length;
+      const avgOrder = orderCount > 0 ? totalSpent / orderCount : 0;
+      setSpendingStats({ totalSpent, orderCount, avgOrder });
     } catch {
       // Silently fail - orders section is supplementary
     } finally {
@@ -260,6 +272,69 @@ export default function Profile() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Spending Summary */}
+        <div className="grid grid-cols-3 gap-4 mb-6">
+          <Card className="bg-slate-900 border-slate-700">
+            <CardContent className="pt-4 pb-4 px-4">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-lg bg-emerald-500/15 flex items-center justify-center shrink-0">
+                  <DollarSign className="h-5 w-5 text-emerald-400" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs text-slate-400 truncate">Total Spent</p>
+                  {ordersLoading ? (
+                    <div className="h-5 w-16 bg-slate-700 rounded animate-pulse mt-1" />
+                  ) : (
+                    <p className="text-lg font-bold text-white truncate">
+                      AED {spendingStats.totalSpent.toFixed(0)}
+                    </p>
+                  )}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-slate-900 border-slate-700">
+            <CardContent className="pt-4 pb-4 px-4">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-lg bg-blue-500/15 flex items-center justify-center shrink-0">
+                  <ShoppingBag className="h-5 w-5 text-blue-400" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs text-slate-400 truncate">Orders</p>
+                  {ordersLoading ? (
+                    <div className="h-5 w-10 bg-slate-700 rounded animate-pulse mt-1" />
+                  ) : (
+                    <p className="text-lg font-bold text-white">
+                      {spendingStats.orderCount}
+                    </p>
+                  )}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-slate-900 border-slate-700">
+            <CardContent className="pt-4 pb-4 px-4">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-lg bg-purple-500/15 flex items-center justify-center shrink-0">
+                  <TrendingUp className="h-5 w-5 text-purple-400" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs text-slate-400 truncate">Avg. Order</p>
+                  {ordersLoading ? (
+                    <div className="h-5 w-16 bg-slate-700 rounded animate-pulse mt-1" />
+                  ) : (
+                    <p className="text-lg font-bold text-white truncate">
+                      AED {spendingStats.avgOrder.toFixed(0)}
+                    </p>
+                  )}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
 
         {/* Display Name */}
         <Card className="bg-slate-900 border-slate-700 mb-6">
