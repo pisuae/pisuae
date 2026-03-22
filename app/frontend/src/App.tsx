@@ -10,6 +10,7 @@ import Orders from './pages/Orders';
 import VendorSignup from './pages/VendorSignup';
 import VendorDashboard from './pages/VendorDashboard';
 import VendorAnalytics from './pages/VendorAnalytics';
+import Profile from './pages/Profile';
 import AuthCallback from './pages/AuthCallback';
 import AuthError from './pages/AuthError';
 
@@ -29,6 +30,7 @@ const App = () => (
           <Route path="/vendor/signup" element={<VendorSignup />} />
           <Route path="/vendor/dashboard" element={<VendorDashboard />} />
           <Route path="/vendor/analytics" element={<VendorAnalytics />} />
+          <Route path="/profile" element={<Profile />} />
           <Route path="/auth/callback" element={<AuthCallback />} />
           <Route path="/auth/error" element={<AuthError />} />
         </Routes>

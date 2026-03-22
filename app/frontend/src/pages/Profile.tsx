@@ -1,0 +1,388 @@
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { User, Mail, Save, ArrowLeft, Bell, Moon, Sun, Globe, Newspaper, Check } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Switch } from '@/components/ui/switch';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Separator } from '@/components/ui/separator';
+import { toast } from 'sonner';
+import Header from '@/components/Header';
+import { client } from '@/lib/api';
+
+interface UserProfile {
+  id: string;
+  email: string;
+  name?: string;
+  avatar?: string;
+}
+
+interface UserPreferences {
+  id?: number;
+  display_name: string;
+  theme: string;
+  language: string;
+  notifications_enabled: boolean;
+  newsletter_subscribed: boolean;
+}
+
+const DEFAULT_PREFERENCES: UserPreferences = {
+  display_name: '',
+  theme: 'dark',
+  language: 'en',
+  notifications_enabled: true,
+  newsletter_subscribed: false,
+};
+
+const LANGUAGES = [
+  { value: 'en', label: 'English' },
+  { value: 'ar', label: 'العربية (Arabic)' },
+  { value: 'fr', label: 'Français (French)' },
+  { value: 'es', label: 'Español (Spanish)' },
+  { value: 'zh', label: '中文 (Chinese)' },
+];
+
+export default function Profile() {
+  const [user, setUser] = useState<UserProfile | null>(null);
+  const [preferences, setPreferences] = useState<UserPreferences>(DEFAULT_PREFERENCES);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [hasChanges, setHasChanges] = useState(false);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    loadProfile();
+  }, []);
+
+  const loadProfile = async () => {
+    try {
+      const res = await client.auth.me();
+      if (!res?.data) {
+        toast.error('Please sign in to view your profile');
+        navigate('/');
+        return;
+      }
+      setUser({
+        id: res.data.id || res.data.sub,
+        email: res.data.email || '',
+        name: res.data.name || res.data.nickname || '',
+        avatar: res.data.picture || res.data.avatar || '',
+      });
+
+      // Load preferences from database
+      const prefRes = await client.entities.user_preferences.query({ query: {} });
+      const items = prefRes?.data?.items || [];
+      if (items.length > 0) {
+        const pref = items[0];
+        setPreferences({
+          id: pref.id,
+          display_name: pref.display_name || '',
+          theme: pref.theme || 'dark',
+          language: pref.language || 'en',
+          notifications_enabled: pref.notifications_enabled ?? true,
+          newsletter_subscribed: pref.newsletter_subscribed ?? false,
+        });
+      } else {
+        // Set display name from auth profile
+        setPreferences({
+          ...DEFAULT_PREFERENCES,
+          display_name: res.data.name || res.data.nickname || '',
+        });
+      }
+    } catch {
+      toast.error('Failed to load profile');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      const now = new Date().toISOString().replace('T', ' ').slice(0, 19);
+      if (preferences.id) {
+        await client.entities.user_preferences.update({
+          id: String(preferences.id),
+          data: {
+            display_name: preferences.display_name,
+            theme: preferences.theme,
+            language: preferences.language,
+            notifications_enabled: preferences.notifications_enabled,
+            newsletter_subscribed: preferences.newsletter_subscribed,
+            updated_at: now,
+          },
+        });
+      } else {
+        const res = await client.entities.user_preferences.create({
+          data: {
+            display_name: preferences.display_name,
+            theme: preferences.theme,
+            language: preferences.language,
+            notifications_enabled: preferences.notifications_enabled,
+            newsletter_subscribed: preferences.newsletter_subscribed,
+            created_at: now,
+            updated_at: now,
+          },
+        });
+        if (res?.data?.id) {
+          setPreferences((prev) => ({ ...prev, id: res.data.id }));
+        }
+      }
+      setHasChanges(false);
+      toast.success('Profile updated successfully!');
+    } catch {
+      toast.error('Failed to save preferences');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const updatePreference = <K extends keyof UserPreferences>(key: K, value: UserPreferences[K]) => {
+    setPreferences((prev) => ({ ...prev, [key]: value }));
+    setHasChanges(true);
+  };
+
+  const getInitials = (name?: string, email?: string) => {
+    if (name) return name.slice(0, 2).toUpperCase();
+    if (email) return email.slice(0, 2).toUpperCase();
+    return 'U';
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-slate-950">
+        <Header />
+        <div className="flex items-center justify-center h-[60vh]">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500" />
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-slate-950">
+        <Header />
+        <div className="flex flex-col items-center justify-center h-[60vh] gap-4">
+          <User className="h-16 w-16 text-slate-500" />
+          <p className="text-slate-400 text-lg">Please sign in to view your profile</p>
+          <Button onClick={() => client.auth.toLogin()} className="bg-blue-600 hover:bg-blue-500">
+            Sign In
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-slate-950">
+      <Header />
+      <div className="container mx-auto px-4 py-8 max-w-3xl">
+        {/* Back Button */}
+        <Button
+          variant="ghost"
+          onClick={() => navigate(-1)}
+          className="text-slate-400 hover:text-white mb-6"
+        >
+          <ArrowLeft className="h-4 w-4 mr-2" />
+          Back
+        </Button>
+
+        {/* Profile Header Card */}
+        <Card className="bg-slate-900 border-slate-700 mb-6">
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-6">
+              <Avatar className="h-20 w-20 border-2 border-blue-500">
+                <AvatarImage src={user.avatar} alt={user.name || 'User'} />
+                <AvatarFallback className="bg-blue-600 text-white text-xl font-bold">
+                  {getInitials(preferences.display_name || user.name, user.email)}
+                </AvatarFallback>
+              </Avatar>
+              <div className="flex-1">
+                <h1 className="text-2xl font-bold text-white">
+                  {preferences.display_name || user.name || 'User'}
+                </h1>
+                <div className="flex items-center gap-2 mt-1 text-slate-400">
+                  <Mail className="h-4 w-4" />
+                  <span>{user.email}</span>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Display Name */}
+        <Card className="bg-slate-900 border-slate-700 mb-6">
+          <CardHeader>
+            <CardTitle className="text-white flex items-center gap-2">
+              <User className="h-5 w-5 text-blue-400" />
+              Display Name
+            </CardTitle>
+            <CardDescription className="text-slate-400">
+              Choose how your name appears across the platform
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              <Label htmlFor="displayName" className="text-slate-300">
+                Display Name
+              </Label>
+              <Input
+                id="displayName"
+                value={preferences.display_name}
+                onChange={(e) => updatePreference('display_name', e.target.value)}
+                placeholder="Enter your display name"
+                className="bg-slate-800 border-slate-600 text-white placeholder:text-slate-500 focus:border-blue-500"
+              />
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Preferences */}
+        <Card className="bg-slate-900 border-slate-700 mb-6">
+          <CardHeader>
+            <CardTitle className="text-white flex items-center gap-2">
+              <Globe className="h-5 w-5 text-emerald-400" />
+              Preferences
+            </CardTitle>
+            <CardDescription className="text-slate-400">
+              Customize your experience
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {/* Theme */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                {preferences.theme === 'dark' ? (
+                  <Moon className="h-5 w-5 text-indigo-400" />
+                ) : (
+                  <Sun className="h-5 w-5 text-amber-400" />
+                )}
+                <div>
+                  <p className="text-white font-medium">Theme</p>
+                  <p className="text-sm text-slate-400">Choose your preferred theme</p>
+                </div>
+              </div>
+              <Select
+                value={preferences.theme}
+                onValueChange={(value) => updatePreference('theme', value)}
+              >
+                <SelectTrigger className="w-32 bg-slate-800 border-slate-600 text-white">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="bg-slate-800 border-slate-600">
+                  <SelectItem value="dark" className="text-white hover:bg-slate-700">Dark</SelectItem>
+                  <SelectItem value="light" className="text-white hover:bg-slate-700">Light</SelectItem>
+                  <SelectItem value="system" className="text-white hover:bg-slate-700">System</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <Separator className="bg-slate-700" />
+
+            {/* Language */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Globe className="h-5 w-5 text-cyan-400" />
+                <div>
+                  <p className="text-white font-medium">Language</p>
+                  <p className="text-sm text-slate-400">Select your preferred language</p>
+                </div>
+              </div>
+              <Select
+                value={preferences.language}
+                onValueChange={(value) => updatePreference('language', value)}
+              >
+                <SelectTrigger className="w-40 bg-slate-800 border-slate-600 text-white">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="bg-slate-800 border-slate-600">
+                  {LANGUAGES.map((lang) => (
+                    <SelectItem key={lang.value} value={lang.value} className="text-white hover:bg-slate-700">
+                      {lang.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Notifications */}
+        <Card className="bg-slate-900 border-slate-700 mb-6">
+          <CardHeader>
+            <CardTitle className="text-white flex items-center gap-2">
+              <Bell className="h-5 w-5 text-amber-400" />
+              Notifications
+            </CardTitle>
+            <CardDescription className="text-slate-400">
+              Manage your notification preferences
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {/* Push Notifications */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Bell className="h-5 w-5 text-blue-400" />
+                <div>
+                  <p className="text-white font-medium">Push Notifications</p>
+                  <p className="text-sm text-slate-400">Receive order updates and alerts</p>
+                </div>
+              </div>
+              <Switch
+                checked={preferences.notifications_enabled}
+                onCheckedChange={(checked) => updatePreference('notifications_enabled', checked)}
+              />
+            </div>
+
+            <Separator className="bg-slate-700" />
+
+            {/* Newsletter */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Newspaper className="h-5 w-5 text-purple-400" />
+                <div>
+                  <p className="text-white font-medium">Newsletter</p>
+                  <p className="text-sm text-slate-400">Get weekly deals and product updates</p>
+                </div>
+              </div>
+              <Switch
+                checked={preferences.newsletter_subscribed}
+                onCheckedChange={(checked) => updatePreference('newsletter_subscribed', checked)}
+              />
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Save Button */}
+        <div className="flex justify-end gap-3 pb-8">
+          <Button
+            onClick={handleSave}
+            disabled={saving || !hasChanges}
+            className="bg-blue-600 hover:bg-blue-500 text-white px-8 disabled:opacity-50"
+          >
+            {saving ? (
+              <>
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
+                Saving...
+              </>
+            ) : hasChanges ? (
+              <>
+                <Save className="h-4 w-4 mr-2" />
+                Save Changes
+              </>
+            ) : (
+              <>
+                <Check className="h-4 w-4 mr-2" />
+                Saved
+              </>
+            )}
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}

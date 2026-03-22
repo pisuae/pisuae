@@ -1,0 +1,48 @@
+{
+    "title": "user_preferences",
+    "type": "object",
+    "properties": {
+        "id": {
+            "type": "integer",
+            "description": "Primary key, auto-increment"
+        },
+        "user_id": {
+            "type": "string",
+            "description": "User ID"
+        },
+        "display_name": {
+            "type": "string",
+            "description": "User display name"
+        },
+        "theme": {
+            "type": "string",
+            "description": "Preferred theme: light or dark"
+        },
+        "language": {
+            "type": "string",
+            "description": "Preferred language"
+        },
+        "notifications_enabled": {
+            "type": "boolean",
+            "description": "Whether notifications are enabled"
+        },
+        "newsletter_subscribed": {
+            "type": "boolean",
+            "description": "Whether subscribed to newsletter"
+        },
+        "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Created timestamp"
+        },
+        "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Updated timestamp"
+        }
+    },
+    "required": [
+        "id",
+        "user_id"
+    ]
+}

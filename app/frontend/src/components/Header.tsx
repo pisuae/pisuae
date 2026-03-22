@@ -134,6 +134,10 @@ export default function Header({ cartCount = 0, onSearch }: HeaderProps) {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="bg-slate-800 border-slate-700 text-white">
+                <DropdownMenuItem onClick={() => navigate('/profile')} className="hover:bg-slate-700 cursor-pointer">
+                  <User className="h-4 w-4 mr-2" />
+                  My Profile
+                </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => navigate('/orders')} className="hover:bg-slate-700 cursor-pointer">
                   <Package className="h-4 w-4 mr-2" />
                   My Orders
