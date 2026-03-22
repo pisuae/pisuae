@@ -1,138 +1,130 @@
 [
     {
-        "product_id": 1,
+        "product_id": 11,
         "rating": 5,
-        "review_text": "Excellent gaming laptop! The RTX 4070 handles everything I throw at it. RGB keyboard is gorgeous.",
-        "reviewer_name": "GamerPro99",
-        "user_id": "sample-user-1",
-        "created_at": "2026-03-20 14:30:00"
+        "review_text": "Absolutely stunning phone! The camera quality is incredible and the titanium design feels premium.",
+        "reviewer_name": "Sarah M.",
+        "user_id": "seed-user-001",
+        "created_at": "2026-03-20 10:00:00"
     },
     {
-        "product_id": 1,
+        "product_id": 11,
         "rating": 4,
-        "review_text": "Great performance but runs a bit hot under heavy load. Overall very satisfied.",
-        "reviewer_name": "TechReviewer",
-        "user_id": "sample-user-2",
+        "review_text": "Great performance and battery life. The Pro Max is worth every penny.",
+        "reviewer_name": "James K.",
+        "user_id": "seed-user-002",
+        "created_at": "2026-03-19 14:30:00"
+    },
+    {
+        "product_id": 12,
+        "rating": 5,
+        "review_text": "The S Pen integration is seamless. Best Android phone I've ever used.",
+        "reviewer_name": "David L.",
+        "user_id": "seed-user-003",
         "created_at": "2026-03-21 09:15:00"
     },
     {
-        "product_id": 2,
-        "rating": 5,
-        "review_text": "The OLED display is absolutely stunning. Perfect for photo editing and productivity.",
-        "reviewer_name": "DesignPro",
-        "user_id": "sample-user-3",
+        "product_id": 12,
+        "rating": 4,
+        "review_text": "Amazing display and camera. Galaxy AI features are genuinely useful.",
+        "reviewer_name": "Emily R.",
+        "user_id": "seed-user-004",
         "created_at": "2026-03-20 16:45:00"
     },
     {
-        "product_id": 2,
+        "product_id": 13,
+        "rating": 5,
+        "review_text": "Perfect size and great value. The iPhone 16 is a solid upgrade.",
+        "reviewer_name": "Mike T.",
+        "user_id": "seed-user-005",
+        "created_at": "2026-03-21 11:00:00"
+    },
+    {
+        "product_id": 13,
         "rating": 4,
-        "review_text": "Lightweight and portable. Battery life could be better though.",
-        "reviewer_name": "RoadWarrior",
-        "user_id": "sample-user-4",
-        "created_at": "2026-03-21 11:20:00"
+        "review_text": "Love the new Camera Control button. Makes photography so much easier.",
+        "reviewer_name": "Anna P.",
+        "user_id": "seed-user-006",
+        "created_at": "2026-03-19 08:20:00"
     },
     {
-        "product_id": 3,
+        "product_id": 14,
         "rating": 4,
-        "review_text": "Solid gaming laptop for the price. The 165Hz display is smooth.",
-        "reviewer_name": "BudgetGamer",
-        "user_id": "sample-user-5",
-        "created_at": "2026-03-19 08:00:00"
-    },
-    {
-        "product_id": 4,
-        "rating": 5,
-        "review_text": "Best ultrabook I've ever owned. The OLED screen is incredible for the price.",
-        "reviewer_name": "UltrabookFan",
-        "user_id": "sample-user-6",
-        "created_at": "2026-03-20 10:30:00"
-    },
-    {
-        "product_id": 5,
-        "rating": 5,
-        "review_text": "M4 Pro is a beast. Compiles code in seconds. Best investment for development.",
-        "reviewer_name": "DevMaster",
-        "user_id": "sample-user-1",
-        "created_at": "2026-03-18 15:00:00"
-    },
-    {
-        "product_id": 5,
-        "rating": 5,
-        "review_text": "Battery life is insane. 20+ hours on a single charge. Display is gorgeous.",
-        "reviewer_name": "MacLover",
-        "user_id": "sample-user-2",
-        "created_at": "2026-03-19 12:00:00"
-    },
-    {
-        "product_id": 5,
-        "rating": 4,
-        "review_text": "Amazing machine but the price is steep. Worth it if you need the power.",
-        "reviewer_name": "ProUser",
-        "user_id": "sample-user-3",
-        "created_at": "2026-03-20 09:00:00"
-    },
-    {
-        "product_id": 6,
-        "rating": 4,
-        "review_text": "Love the thin design. Perfect for students and light work.",
-        "reviewer_name": "StudentLife",
-        "user_id": "sample-user-4",
-        "created_at": "2026-03-21 14:00:00"
-    },
-    {
-        "product_id": 7,
-        "rating": 5,
-        "review_text": "The keyboard is legendary. Best typing experience on any laptop.",
-        "reviewer_name": "WriterPro",
-        "user_id": "sample-user-5",
-        "created_at": "2026-03-19 16:30:00"
-    },
-    {
-        "product_id": 7,
-        "rating": 4,
-        "review_text": "Rock solid build quality. MIL-STD certified and it shows.",
-        "reviewer_name": "BusinessUser",
-        "user_id": "sample-user-6",
-        "created_at": "2026-03-20 11:45:00"
-    },
-    {
-        "product_id": 8,
-        "rating": 5,
-        "review_text": "The 2-in-1 form factor is perfect for note-taking and presentations.",
-        "reviewer_name": "FlexUser",
-        "user_id": "sample-user-1",
-        "created_at": "2026-03-21 08:30:00"
-    },
-    {
-        "product_id": 9,
-        "rating": 5,
-        "review_text": "InfinityEdge display is breathtaking. Build quality is premium.",
-        "reviewer_name": "DesignLover",
-        "user_id": "sample-user-2",
+        "review_text": "Compact and powerful. Samsung really nailed it with the S25.",
+        "reviewer_name": "Chris W.",
+        "user_id": "seed-user-007",
         "created_at": "2026-03-20 13:00:00"
     },
     {
-        "product_id": 9,
-        "rating": 4,
-        "review_text": "Great laptop but wish it had more ports. Need a dongle for everything.",
-        "reviewer_name": "PortHunter",
-        "user_id": "sample-user-3",
-        "created_at": "2026-03-21 10:00:00"
+        "product_id": 15,
+        "rating": 5,
+        "review_text": "The battery life is insane! 5850mAh with fast charging is a game changer.",
+        "reviewer_name": "Lisa H.",
+        "user_id": "seed-user-008",
+        "created_at": "2026-03-21 15:30:00"
     },
     {
-        "product_id": 10,
+        "product_id": 15,
         "rating": 4,
-        "review_text": "Excellent value for money. Does everything I need for work and entertainment.",
-        "reviewer_name": "ValueSeeker",
-        "user_id": "sample-user-4",
-        "created_at": "2026-03-19 14:00:00"
+        "review_text": "Honor Magic 7 Pro punches way above its price. Excellent value.",
+        "reviewer_name": "Tom B.",
+        "user_id": "seed-user-009",
+        "created_at": "2026-03-18 10:45:00"
     },
     {
-        "product_id": 10,
-        "rating": 3,
-        "review_text": "Good laptop but the build feels a bit plasticky compared to XPS line.",
-        "reviewer_name": "QualityCheck",
-        "user_id": "sample-user-5",
-        "created_at": "2026-03-20 17:00:00"
+        "product_id": 16,
+        "rating": 5,
+        "review_text": "The variable aperture camera is revolutionary. Best phone camera I've used.",
+        "reviewer_name": "Rachel G.",
+        "user_id": "seed-user-010",
+        "created_at": "2026-03-20 09:00:00"
+    },
+    {
+        "product_id": 17,
+        "rating": 4,
+        "review_text": "The foldable experience is incredible. Using it as a mini tablet is amazing.",
+        "reviewer_name": "Kevin S.",
+        "user_id": "seed-user-011",
+        "created_at": "2026-03-19 17:00:00"
+    },
+    {
+        "product_id": 17,
+        "rating": 5,
+        "review_text": "Z Fold 6 is the best foldable on the market. Period.",
+        "reviewer_name": "Nicole F.",
+        "user_id": "seed-user-012",
+        "created_at": "2026-03-21 12:30:00"
+    },
+    {
+        "product_id": 18,
+        "rating": 5,
+        "review_text": "The Desert Titanium color is gorgeous. Performance is top-notch.",
+        "reviewer_name": "Alex D.",
+        "user_id": "seed-user-013",
+        "created_at": "2026-03-20 14:15:00"
+    },
+    {
+        "product_id": 19,
+        "rating": 4,
+        "review_text": "Thinnest foldable I've held. Honor really pushed the boundaries.",
+        "reviewer_name": "Maria C.",
+        "user_id": "seed-user-014",
+        "created_at": "2026-03-19 11:30:00"
+    },
+    {
+        "product_id": 20,
+        "rating": 5,
+        "review_text": "Mate 70 Pro is a powerhouse. HarmonyOS is smooth and feature-rich.",
+        "reviewer_name": "Daniel J.",
+        "user_id": "seed-user-015",
+        "created_at": "2026-03-21 08:00:00"
+    },
+    {
+        "product_id": 20,
+        "rating": 4,
+        "review_text": "Excellent build quality and camera. The satellite messaging is a nice bonus.",
+        "reviewer_name": "Sophie L.",
+        "user_id": "seed-user-016",
+        "created_at": "2026-03-18 16:00:00"
     }
 ]

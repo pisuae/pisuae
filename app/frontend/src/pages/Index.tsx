@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ArrowRight, Cpu, HardDrive, Monitor, Battery, MemoryStick, Keyboard, Zap, Shield, Truck, Laptop } from 'lucide-react';
+import { ArrowRight, Cpu, HardDrive, Monitor, Battery, MemoryStick, Keyboard, Zap, Shield, Truck, Laptop, Smartphone } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { toast } from 'sonner';
@@ -25,6 +25,7 @@ interface Product {
 }
 
 const categories = [
+  { name: 'Phones', icon: Smartphone, color: 'from-rose-500 to-rose-700' },
   { name: 'Laptops', icon: Laptop, color: 'from-indigo-500 to-indigo-700' },
   { name: 'Motherboards', icon: Cpu, color: 'from-blue-500 to-blue-700' },
   { name: 'Storage', icon: HardDrive, color: 'from-emerald-500 to-emerald-700' },
@@ -225,7 +226,7 @@ export default function Index() {
             View All <ArrowRight className="h-4 w-4" />
           </Link>
         </div>
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-4 lg:grid-cols-8 gap-3">
           {categories.map((cat) => (
             <Link
               key={cat.name}
