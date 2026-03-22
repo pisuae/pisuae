@@ -9,6 +9,7 @@ import { toast } from 'sonner';
 import Header from '@/components/Header';
 import ProductCard from '@/components/ProductCard';
 import { client } from '@/lib/api';
+import { withRetry } from '@/lib/retry';
 
 interface Product {
   id: number;
@@ -59,11 +60,13 @@ export default function Products() {
   const loadBulkRatings = async (productIds: number[]) => {
     if (productIds.length === 0) return;
     try {
-      const res = await client.apiCall.invoke({
-        url: '/api/v1/reviews/ratings/bulk',
-        method: 'GET',
-        data: { product_ids: productIds.join(',') },
-      });
+      const res = await withRetry(() =>
+        client.apiCall.invoke({
+          url: '/api/v1/reviews/ratings/bulk',
+          method: 'GET',
+          data: { product_ids: productIds.join(',') },
+        })
+      );
       const items = res?.data?.ratings || [];
       const map: Record<number, RatingInfo> = {};
       for (const item of items) {
@@ -88,11 +91,13 @@ export default function Products() {
       if (selectedCondition !== 'all') {
         query.condition = selectedCondition;
       }
-      const res = await client.entities.products.query({
-        query,
-        sort: sortBy,
-        limit: 50,
-      });
+      const res = await withRetry(() =>
+        client.entities.products.query({
+          query,
+          sort: sortBy,
+          limit: 50,
+        })
+      );
       let items = res?.data?.items || [];
       // Client-side search filter
       if (searchQuery.trim()) {
@@ -117,9 +122,9 @@ export default function Products() {
 
   const loadCartCount = async () => {
     try {
-      const user = await client.auth.me();
+      const user = await withRetry(() => client.auth.me());
       if (user?.data) {
-        const res = await client.entities.cart_items.query({ query: {} });
+        const res = await withRetry(() => client.entities.cart_items.query({ query: {} }));
         const items = res?.data?.items || [];
         setCartCount(items.reduce((sum: number, item: any) => sum + (item.quantity || 1), 0));
       }
@@ -130,29 +135,35 @@ export default function Products() {
 
   const handleAddToCart = async (productId: number) => {
     try {
-      const user = await client.auth.me();
+      const user = await withRetry(() => client.auth.me());
       if (!user?.data) {
         toast.error('Please sign in to add items to cart');
         await client.auth.toLogin();
         return;
       }
-      const cartRes = await client.entities.cart_items.query({ query: { product_id: productId } });
+      const cartRes = await withRetry(() =>
+        client.entities.cart_items.query({ query: { product_id: productId } })
+      );
       const existing = cartRes?.data?.items?.[0];
       if (existing) {
-        await client.entities.cart_items.update({
-          id: existing.id,
-          data: { quantity: (existing.quantity || 1) + 1 },
-        });
+        await withRetry(() =>
+          client.entities.cart_items.update({
+            id: existing.id,
+            data: { quantity: (existing.quantity || 1) + 1 },
+          })
+        );
       } else {
-        await client.entities.cart_items.create({
-          data: { product_id: productId, quantity: 1 },
-        });
+        await withRetry(() =>
+          client.entities.cart_items.create({
+            data: { product_id: productId, quantity: 1 },
+          })
+        );
       }
       toast.success('Added to cart!');
       loadCartCount();
     } catch (err) {
       console.error('Failed to add to cart:', err);
-      toast.error('Failed to add to cart');
+      toast.error('Failed to add to cart. Please try again.');
     }
   };
 

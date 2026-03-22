@@ -19,6 +19,7 @@ import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import Header from '@/components/Header';
 import { client } from '@/lib/api';
+import { withRetry } from '@/lib/retry';
 
 interface UserProfile {
   id: string;
@@ -94,11 +95,13 @@ export default function Profile() {
   const loadRecentOrders = async () => {
     try {
       // Fetch all orders for spending stats
-      const allRes = await client.entities.orders.query({
-        query: {},
-        sort: '-created_at',
-        limit: 100,
-      });
+      const allRes = await withRetry(() =>
+        client.entities.orders.query({
+          query: {},
+          sort: '-created_at',
+          limit: 100,
+        })
+      );
       const fetchedOrders: Order[] = allRes?.data?.items || [];
       setAllOrders(fetchedOrders);
 
@@ -133,7 +136,7 @@ export default function Profile() {
 
   const loadProfile = async () => {
     try {
-      const res = await client.auth.me();
+      const res = await withRetry(() => client.auth.me());
       if (!res?.data) {
         toast.error('Please sign in to view your profile');
         navigate('/');
@@ -147,7 +150,7 @@ export default function Profile() {
       });
 
       // Load preferences from database
-      const prefRes = await client.entities.user_preferences.query({ query: {} });
+      const prefRes = await withRetry(() => client.entities.user_preferences.query({ query: {} }));
       const items = prefRes?.data?.items || [];
       if (items.length > 0) {
         const pref = items[0];
@@ -178,29 +181,33 @@ export default function Profile() {
     try {
       const now = new Date().toISOString().replace('T', ' ').slice(0, 19);
       if (preferences.id) {
-        await client.entities.user_preferences.update({
-          id: String(preferences.id),
-          data: {
-            display_name: preferences.display_name,
-            theme: preferences.theme,
-            language: preferences.language,
-            notifications_enabled: preferences.notifications_enabled,
-            newsletter_subscribed: preferences.newsletter_subscribed,
-            updated_at: now,
-          },
-        });
+        await withRetry(() =>
+          client.entities.user_preferences.update({
+            id: String(preferences.id),
+            data: {
+              display_name: preferences.display_name,
+              theme: preferences.theme,
+              language: preferences.language,
+              notifications_enabled: preferences.notifications_enabled,
+              newsletter_subscribed: preferences.newsletter_subscribed,
+              updated_at: now,
+            },
+          })
+        );
       } else {
-        const res = await client.entities.user_preferences.create({
-          data: {
-            display_name: preferences.display_name,
-            theme: preferences.theme,
-            language: preferences.language,
-            notifications_enabled: preferences.notifications_enabled,
-            newsletter_subscribed: preferences.newsletter_subscribed,
-            created_at: now,
-            updated_at: now,
-          },
-        });
+        const res = await withRetry(() =>
+          client.entities.user_preferences.create({
+            data: {
+              display_name: preferences.display_name,
+              theme: preferences.theme,
+              language: preferences.language,
+              notifications_enabled: preferences.notifications_enabled,
+              newsletter_subscribed: preferences.newsletter_subscribed,
+              created_at: now,
+              updated_at: now,
+            },
+          })
+        );
         if (res?.data?.id) {
           setPreferences((prev) => ({ ...prev, id: res.data.id }));
         }

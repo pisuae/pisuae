@@ -6,6 +6,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import Header from '@/components/Header';
 import { client } from '@/lib/api';
+import { withRetry } from '@/lib/retry';
 
 interface Order {
   id: number | string;
@@ -51,7 +52,7 @@ export default function Orders() {
 
   const checkAuthAndLoad = async () => {
     try {
-      const res = await client.auth.me();
+      const res = await withRetry(() => client.auth.me());
       if (res?.data) {
         setUser(res.data);
         await loadOrders();
@@ -66,16 +67,20 @@ export default function Orders() {
 
   const loadOrders = async () => {
     try {
-      const res = await client.entities.orders.query({
-        query: {},
-        sort: '-created_at',
-      });
+      const res = await withRetry(() =>
+        client.entities.orders.query({
+          query: {},
+          sort: '-created_at',
+        })
+      );
       const items: Order[] = res?.data?.items || [];
 
       const enriched: OrderWithProduct[] = await Promise.all(
         items.map(async (order) => {
           try {
-            const prodRes = await client.entities.products.get({ id: String(order.product_id) });
+            const prodRes = await withRetry(() =>
+              client.entities.products.get({ id: String(order.product_id) })
+            );
             return { ...order, product: prodRes?.data };
           } catch {
             return { ...order, product: undefined };
@@ -90,7 +95,7 @@ export default function Orders() {
 
   const loadCartCount = async () => {
     try {
-      const res = await client.entities.cart_items.query({ query: {} });
+      const res = await withRetry(() => client.entities.cart_items.query({ query: {} }));
       const items = res?.data?.items || [];
       setCartCount(items.reduce((sum: number, item: any) => sum + (item.quantity || 1), 0));
     } catch {

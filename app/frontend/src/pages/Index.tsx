@@ -7,6 +7,7 @@ import { toast } from 'sonner';
 import Header from '@/components/Header';
 import ProductCard from '@/components/ProductCard';
 import { client } from '@/lib/api';
+import { withRetry } from '@/lib/retry';
 
 const HERO_IMAGE = 'https://mgx-backend-cdn.metadl.com/generate/images/1040407/2026-03-18/8db7c9fe-7e9e-4248-a343-e5e92c3ed9e4.png';
 const REPAIR_IMAGE = 'https://mgx-backend-cdn.metadl.com/generate/images/1040407/2026-03-18/b4f787f3-521f-433a-adbb-011f6bfd6924.png';
@@ -63,11 +64,13 @@ export default function Index() {
   const loadBulkRatings = async (productIds: number[]) => {
     if (productIds.length === 0) return;
     try {
-      const res = await client.apiCall.invoke({
-        url: '/api/v1/reviews/ratings/bulk',
-        method: 'GET',
-        data: { product_ids: productIds.join(',') },
-      });
+      const res = await withRetry(() =>
+        client.apiCall.invoke({
+          url: '/api/v1/reviews/ratings/bulk',
+          method: 'GET',
+          data: { product_ids: productIds.join(',') },
+        })
+      );
       const items = res?.data?.ratings || [];
       const map: Record<number, RatingInfo> = {};
       for (const item of items) {
@@ -84,11 +87,13 @@ export default function Index() {
 
   const loadFeaturedProducts = async () => {
     try {
-      const res = await client.entities.products.query({
-        query: { status: 'active' },
-        limit: 8,
-        sort: '-created_at',
-      });
+      const res = await withRetry(() =>
+        client.entities.products.query({
+          query: { status: 'active' },
+          limit: 8,
+          sort: '-created_at',
+        })
+      );
       const items = res?.data?.items || [];
       setFeaturedProducts(items);
       const ids = items.map((p: Product) => p.id);
@@ -102,9 +107,9 @@ export default function Index() {
 
   const loadCartCount = async () => {
     try {
-      const user = await client.auth.me();
+      const user = await withRetry(() => client.auth.me());
       if (user?.data) {
-        const res = await client.entities.cart_items.query({ query: {} });
+        const res = await withRetry(() => client.entities.cart_items.query({ query: {} }));
         const items = res?.data?.items || [];
         setCartCount(items.reduce((sum: number, item: any) => sum + (item.quantity || 1), 0));
       }
@@ -115,30 +120,36 @@ export default function Index() {
 
   const handleAddToCart = async (productId: number) => {
     try {
-      const user = await client.auth.me();
+      const user = await withRetry(() => client.auth.me());
       if (!user?.data) {
         toast.error('Please sign in to add items to cart');
         await client.auth.toLogin();
         return;
       }
       // Check if already in cart
-      const cartRes = await client.entities.cart_items.query({ query: { product_id: productId } });
+      const cartRes = await withRetry(() =>
+        client.entities.cart_items.query({ query: { product_id: productId } })
+      );
       const existing = cartRes?.data?.items?.[0];
       if (existing) {
-        await client.entities.cart_items.update({
-          id: existing.id,
-          data: { quantity: (existing.quantity || 1) + 1 },
-        });
+        await withRetry(() =>
+          client.entities.cart_items.update({
+            id: existing.id,
+            data: { quantity: (existing.quantity || 1) + 1 },
+          })
+        );
       } else {
-        await client.entities.cart_items.create({
-          data: { product_id: productId, quantity: 1 },
-        });
+        await withRetry(() =>
+          client.entities.cart_items.create({
+            data: { product_id: productId, quantity: 1 },
+          })
+        );
       }
       toast.success('Added to cart!');
       loadCartCount();
     } catch (err) {
       console.error('Failed to add to cart:', err);
-      toast.error('Failed to add to cart');
+      toast.error('Failed to add to cart. Please try again.');
     }
   };
 

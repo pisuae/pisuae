@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 import Header from '@/components/Header';
 import { client } from '@/lib/api';
+import { withRetry } from '@/lib/retry';
 import { resolveImageUrl } from '@/lib/image';
 
 interface Product {
@@ -157,7 +158,7 @@ export default function ProductDetail() {
 
   const checkAuth = async () => {
     try {
-      const user = await client.auth.me();
+      const user = await withRetry(() => client.auth.me());
       setIsLoggedIn(!!user?.data);
     } catch {
       setIsLoggedIn(false);
@@ -167,7 +168,7 @@ export default function ProductDetail() {
   const loadProduct = async () => {
     if (!id) return;
     try {
-      const res = await client.entities.products.get({ id });
+      const res = await withRetry(() => client.entities.products.get({ id }));
       const prod = res?.data || null;
       setProduct(prod);
       if (prod?.image_url) {
@@ -200,10 +201,12 @@ export default function ProductDetail() {
     if (!id) return;
     setReviewsLoading(true);
     try {
-      const res = await client.apiCall.invoke({
-        url: `/api/v1/reviews/product/${id}`,
-        method: 'GET',
-      });
+      const res = await withRetry(() =>
+        client.apiCall.invoke({
+          url: `/api/v1/reviews/product/${id}`,
+          method: 'GET',
+        })
+      );
       const data = res?.data;
       setReviews(data?.items || []);
       setReviewsTotal(data?.total || 0);
@@ -217,10 +220,12 @@ export default function ProductDetail() {
   const loadRating = async () => {
     if (!id) return;
     try {
-      const res = await client.apiCall.invoke({
-        url: `/api/v1/reviews/rating/${id}`,
-        method: 'GET',
-      });
+      const res = await withRetry(() =>
+        client.apiCall.invoke({
+          url: `/api/v1/reviews/rating/${id}`,
+          method: 'GET',
+        })
+      );
       const data = res?.data;
       setAvgRating(data?.average_rating || 0);
       setReviewCount(data?.review_count || 0);
@@ -231,9 +236,9 @@ export default function ProductDetail() {
 
   const loadCartCount = async () => {
     try {
-      const user = await client.auth.me();
+      const user = await withRetry(() => client.auth.me());
       if (user?.data) {
-        const res = await client.entities.cart_items.query({ query: {} });
+        const res = await withRetry(() => client.entities.cart_items.query({ query: {} }));
         const items = res?.data?.items || [];
         setCartCount(items.reduce((sum: number, item: any) => sum + (item.quantity || 1), 0));
       }
@@ -246,29 +251,35 @@ export default function ProductDetail() {
     if (!product) return;
     setAdding(true);
     try {
-      const user = await client.auth.me();
+      const user = await withRetry(() => client.auth.me());
       if (!user?.data) {
         toast.error('Please sign in to add items to cart');
         await client.auth.toLogin();
         return;
       }
-      const cartRes = await client.entities.cart_items.query({ query: { product_id: product.id } });
+      const cartRes = await withRetry(() =>
+        client.entities.cart_items.query({ query: { product_id: product.id } })
+      );
       const existing = cartRes?.data?.items?.[0];
       if (existing) {
-        await client.entities.cart_items.update({
-          id: existing.id,
-          data: { quantity: (existing.quantity || 0) + quantity },
-        });
+        await withRetry(() =>
+          client.entities.cart_items.update({
+            id: existing.id,
+            data: { quantity: (existing.quantity || 0) + quantity },
+          })
+        );
       } else {
-        await client.entities.cart_items.create({
-          data: { product_id: product.id, quantity },
-        });
+        await withRetry(() =>
+          client.entities.cart_items.create({
+            data: { product_id: product.id, quantity },
+          })
+        );
       }
       toast.success(`Added ${quantity} item(s) to cart!`);
       loadCartCount();
     } catch (err) {
       console.error('Failed to add to cart:', err);
-      toast.error('Failed to add to cart');
+      toast.error('Failed to add to cart. Please try again.');
     } finally {
       setAdding(false);
     }
@@ -286,15 +297,17 @@ export default function ProductDetail() {
     }
     setSubmittingReview(true);
     try {
-      await client.entities.reviews.create({
-        data: {
-          product_id: Number(id),
-          rating: newRating,
-          review_text: newReviewText.trim() || null,
-          reviewer_name: newReviewerName.trim() || 'Anonymous',
-          created_at: new Date().toISOString(),
-        },
-      });
+      await withRetry(() =>
+        client.entities.reviews.create({
+          data: {
+            product_id: Number(id),
+            rating: newRating,
+            review_text: newReviewText.trim() || null,
+            reviewer_name: newReviewerName.trim() || 'Anonymous',
+            created_at: new Date().toISOString(),
+          },
+        })
+      );
       toast.success('Review submitted successfully!');
       setNewRating(0);
       setNewReviewText('');
