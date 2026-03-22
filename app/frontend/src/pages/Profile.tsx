@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { User, Mail, Save, ArrowLeft, Bell, Moon, Sun, Globe, Newspaper, Check, Package, ArrowRight, DollarSign, TrendingUp, ShoppingBag, BarChart3, Download, CalendarIcon } from 'lucide-react';
+import { User, Mail, Save, ArrowLeft, Bell, Moon, Sun, Globe, Newspaper, Check, Package, ArrowRight, DollarSign, TrendingUp, ShoppingBag, BarChart3, Download, CalendarIcon, Camera, Loader2 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 import { format, startOfMonth, eachMonthOfInterval, isWithinInterval } from 'date-fns';
 import { DateRange } from 'react-day-picker';
@@ -35,6 +35,7 @@ interface UserPreferences {
   language: string;
   notifications_enabled: boolean;
   newsletter_subscribed: boolean;
+  avatar_url: string;
 }
 
 interface Order {
@@ -58,7 +59,10 @@ const DEFAULT_PREFERENCES: UserPreferences = {
   language: 'en',
   notifications_enabled: true,
   newsletter_subscribed: false,
+  avatar_url: '',
 };
+
+const BUCKET_NAME = 'profile-pictures';
 
 const LANGUAGES = [
   { value: 'en', label: 'English' },
@@ -78,6 +82,8 @@ export default function Profile() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
+  const [avatarPreview, setAvatarPreview] = useState<string>('');
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [dateRange, setDateRange] = useState<DateRange | undefined>(() => {
     const now = new Date();
     return {
@@ -161,7 +167,22 @@ export default function Profile() {
           language: pref.language || 'en',
           notifications_enabled: pref.notifications_enabled ?? true,
           newsletter_subscribed: pref.newsletter_subscribed ?? false,
+          avatar_url: pref.avatar_url || '',
         });
+        // Load avatar download URL if avatar_url (object_key) exists
+        if (pref.avatar_url) {
+          try {
+            const dlRes = await client.storage.getDownloadUrl({
+              bucket_name: BUCKET_NAME,
+              object_key: pref.avatar_url,
+            });
+            if (dlRes?.data?.download_url) {
+              setAvatarPreview(dlRes.data.download_url);
+            }
+          } catch {
+            // Fallback to auth avatar
+          }
+        }
       } else {
         // Set display name from auth profile
         setPreferences({
@@ -190,6 +211,7 @@ export default function Profile() {
               language: preferences.language,
               notifications_enabled: preferences.notifications_enabled,
               newsletter_subscribed: preferences.newsletter_subscribed,
+              avatar_url: preferences.avatar_url || undefined,
               updated_at: now,
             },
           })
@@ -203,6 +225,7 @@ export default function Profile() {
               language: preferences.language,
               notifications_enabled: preferences.notifications_enabled,
               newsletter_subscribed: preferences.newsletter_subscribed,
+              avatar_url: preferences.avatar_url || undefined,
               created_at: now,
               updated_at: now,
             },
@@ -218,6 +241,91 @@ export default function Profile() {
       toast.error('Failed to save preferences');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please select an image file');
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Image must be less than 5MB');
+      return;
+    }
+
+    setUploadingAvatar(true);
+    try {
+      // Generate a unique object key
+      const ext = file.name.split('.').pop() || 'jpg';
+      const objectKey = `avatars/${user?.id || 'unknown'}_${Date.now()}.${ext}`;
+
+      // Upload using web-sdk
+      const uploadRes = await client.storage.upload({
+        bucket_name: BUCKET_NAME,
+        object_key: objectKey,
+        file,
+      });
+
+      if (uploadRes) {
+        // Save the object_key to user_preferences
+        const now = new Date().toISOString().replace('T', ' ').slice(0, 19);
+        if (preferences.id) {
+          await withRetry(() =>
+            client.entities.user_preferences.update({
+              id: String(preferences.id),
+              data: {
+                avatar_url: objectKey,
+                updated_at: now,
+              },
+            })
+          );
+        } else {
+          const res = await withRetry(() =>
+            client.entities.user_preferences.create({
+              data: {
+                display_name: preferences.display_name,
+                theme: preferences.theme,
+                language: preferences.language,
+                notifications_enabled: preferences.notifications_enabled,
+                newsletter_subscribed: preferences.newsletter_subscribed,
+                avatar_url: objectKey,
+                created_at: now,
+                updated_at: now,
+              },
+            })
+          );
+          if (res?.data?.id) {
+            setPreferences((prev) => ({ ...prev, id: res.data.id }));
+          }
+        }
+
+        setPreferences((prev) => ({ ...prev, avatar_url: objectKey }));
+
+        // Get download URL for preview
+        const dlRes = await client.storage.getDownloadUrl({
+          bucket_name: BUCKET_NAME,
+          object_key: objectKey,
+        });
+        if (dlRes?.data?.download_url) {
+          setAvatarPreview(dlRes.data.download_url);
+        }
+
+        toast.success('Profile picture updated!');
+      }
+    } catch (err) {
+      console.error('Failed to upload avatar:', err);
+      toast.error('Failed to upload profile picture. Please try again.');
+    } finally {
+      setUploadingAvatar(false);
+      // Reset file input
+      e.target.value = '';
     }
   };
 
@@ -354,12 +462,32 @@ export default function Profile() {
         <Card className="bg-slate-900 border-slate-700 mb-6">
           <CardContent className="pt-6">
             <div className="flex items-center gap-6">
-              <Avatar className="h-20 w-20 border-2 border-blue-500">
-                <AvatarImage src={user.avatar} alt={user.name || 'User'} />
-                <AvatarFallback className="bg-blue-600 text-white text-xl font-bold">
-                  {getInitials(preferences.display_name || user.name, user.email)}
-                </AvatarFallback>
-              </Avatar>
+              <div className="relative group">
+                <Avatar className="h-20 w-20 border-2 border-blue-500">
+                  <AvatarImage src={avatarPreview || user.avatar} alt={user.name || 'User'} />
+                  <AvatarFallback className="bg-blue-600 text-white text-xl font-bold">
+                    {getInitials(preferences.display_name || user.name, user.email)}
+                  </AvatarFallback>
+                </Avatar>
+                <label
+                  htmlFor="avatar-upload"
+                  className="absolute inset-0 flex items-center justify-center rounded-full bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                >
+                  {uploadingAvatar ? (
+                    <Loader2 className="h-6 w-6 text-white animate-spin" />
+                  ) : (
+                    <Camera className="h-6 w-6 text-white" />
+                  )}
+                </label>
+                <input
+                  id="avatar-upload"
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleAvatarUpload}
+                  disabled={uploadingAvatar}
+                />
+              </div>
               <div className="flex-1">
                 <h1 className="text-2xl font-bold text-white">
                   {preferences.display_name || user.name || 'User'}
@@ -368,6 +496,7 @@ export default function Profile() {
                   <Mail className="h-4 w-4" />
                   <span>{user.email}</span>
                 </div>
+                <p className="text-xs text-slate-500 mt-1">Hover over avatar to change picture</p>
               </div>
             </div>
           </CardContent>

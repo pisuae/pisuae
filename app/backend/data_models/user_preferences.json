@@ -12,23 +12,27 @@
         },
         "display_name": {
             "type": "string",
-            "description": "User display name"
+            "description": "Display name"
         },
         "theme": {
             "type": "string",
-            "description": "Preferred theme: light or dark"
+            "description": "Theme preference"
         },
         "language": {
             "type": "string",
-            "description": "Preferred language"
+            "description": "Language preference"
         },
         "notifications_enabled": {
             "type": "boolean",
-            "description": "Whether notifications are enabled"
+            "description": "Notifications enabled"
         },
         "newsletter_subscribed": {
             "type": "boolean",
-            "description": "Whether subscribed to newsletter"
+            "description": "Newsletter subscribed"
+        },
+        "avatar_url": {
+            "type": "string",
+            "description": "Object key for profile picture in storage"
         },
         "created_at": {
             "type": "string",

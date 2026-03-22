@@ -13,5 +13,6 @@ class User_preferences(Base):
     language = Column(String, nullable=True)
     notifications_enabled = Column(Boolean, nullable=True)
     newsletter_subscribed = Column(Boolean, nullable=True)
+    avatar_url = Column(String, nullable=True)
     created_at = Column(DateTime(timezone=True), nullable=True)
     updated_at = Column(DateTime(timezone=True), nullable=True)

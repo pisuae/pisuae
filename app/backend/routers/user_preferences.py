@@ -27,6 +27,7 @@ class User_preferencesData(BaseModel):
     language: str = None
     notifications_enabled: bool = None
     newsletter_subscribed: bool = None
+    avatar_url: str = None
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
 
@@ -38,6 +39,7 @@ class User_preferencesUpdateData(BaseModel):
     language: Optional[str] = None
     notifications_enabled: Optional[bool] = None
     newsletter_subscribed: Optional[bool] = None
+    avatar_url: Optional[str] = None
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
 
@@ -51,6 +53,7 @@ class User_preferencesResponse(BaseModel):
     language: Optional[str] = None
     notifications_enabled: Optional[bool] = None
     newsletter_subscribed: Optional[bool] = None
+    avatar_url: Optional[str] = None
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
 
