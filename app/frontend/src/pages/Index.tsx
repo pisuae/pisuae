@@ -57,8 +57,10 @@ export default function Index() {
   const navigate = useNavigate();
 
   useEffect(() => {
+    // Load products first, then stagger cart count to reduce simultaneous Lambda DNS hits
     loadFeaturedProducts();
-    loadCartCount();
+    const timer = setTimeout(() => loadCartCount(), 500);
+    return () => clearTimeout(timer);
   }, []);
 
   const loadBulkRatings = async (productIds: number[]) => {

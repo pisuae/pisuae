@@ -80,8 +80,8 @@ function isRetryableResponse(response: unknown): boolean {
 
 export async function withRetry<T>(
   fn: () => Promise<T>,
-  maxRetries: number = 3,
-  baseDelayMs: number = 1500
+  maxRetries: number = 4,
+  baseDelayMs: number = 2000
 ): Promise<T> {
   let lastError: unknown;
   let lastResult: T | undefined;
@@ -94,7 +94,8 @@ export async function withRetry<T>(
       if (isRetryableResponse(result)) {
         lastResult = result;
         if (attempt < maxRetries) {
-          const delay = baseDelayMs * Math.pow(2, attempt) + Math.random() * 500;
+          // Use jittered exponential backoff: base * 2^attempt + random jitter
+          const delay = baseDelayMs * Math.pow(2, attempt) + Math.random() * 1000;
           console.warn(
             `[Retry] Attempt ${attempt + 1}/${maxRetries} got retryable response (status 5xx / DNS error). Retrying in ${Math.round(delay)}ms...`
           );
@@ -110,7 +111,7 @@ export async function withRetry<T>(
       lastError = error;
 
       if (attempt < maxRetries && isRetryableError(error)) {
-        const delay = baseDelayMs * Math.pow(2, attempt) + Math.random() * 500;
+        const delay = baseDelayMs * Math.pow(2, attempt) + Math.random() * 1000;
         console.warn(
           `[Retry] Attempt ${attempt + 1}/${maxRetries} failed with retryable error. Retrying in ${Math.round(delay)}ms...`,
           error instanceof Error ? error.message : error
@@ -125,4 +126,22 @@ export async function withRetry<T>(
   // If we got a result but it was retryable, return it rather than throwing
   if (lastResult !== undefined) return lastResult;
   throw lastError;
+}
+
+/**
+ * Retry wrapper specifically for non-critical operations.
+ * Uses more retries and longer delays, and never throws - returns a fallback instead.
+ */
+export async function withRetryQuiet<T>(
+  fn: () => Promise<T>,
+  fallback: T,
+  maxRetries: number = 5,
+  baseDelayMs: number = 2500
+): Promise<T> {
+  try {
+    return await withRetry(fn, maxRetries, baseDelayMs);
+  } catch {
+    console.warn('[RetryQuiet] All retries exhausted, returning fallback value.');
+    return fallback;
+  }
 }
