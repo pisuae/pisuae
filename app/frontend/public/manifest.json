@@ -1,0 +1,27 @@
+{
+  "name": "PIS UAE Marketplace",
+  "short_name": "PIS UAE",
+  "description": "Your one-stop e-commerce marketplace for electronics, fashion, beauty, and more",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#2563eb",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "https://mgx-backend-cdn.metadl.com/generate/images/1040407/2026-03-22/73a76494-feb9-4a62-94b4-f433cfe4b10a.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "https://mgx-backend-cdn.metadl.com/generate/images/1040407/2026-03-22/fdba588f-bc3d-4b52-8730-53a834ea7f98.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["shopping", "business"],
+  "screenshots": [],
+  "prefer_related_applications": false
+}
