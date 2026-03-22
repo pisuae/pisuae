@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { User, Mail, Save, ArrowLeft, Bell, Moon, Sun, Globe, Newspaper, Check } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import { User, Mail, Save, ArrowLeft, Bell, Moon, Sun, Globe, Newspaper, Check, Package, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { toast } from 'sonner';
 import Header from '@/components/Header';
@@ -29,6 +30,21 @@ interface UserPreferences {
   newsletter_subscribed: boolean;
 }
 
+interface Order {
+  id: number;
+  total_amount: number;
+  status: string;
+  created_at: string;
+}
+
+const STATUS_STYLES: Record<string, { bg: string; text: string }> = {
+  pending: { bg: 'bg-amber-500/20', text: 'text-amber-400' },
+  processing: { bg: 'bg-blue-500/20', text: 'text-blue-400' },
+  shipped: { bg: 'bg-purple-500/20', text: 'text-purple-400' },
+  delivered: { bg: 'bg-emerald-500/20', text: 'text-emerald-400' },
+  cancelled: { bg: 'bg-red-500/20', text: 'text-red-400' },
+};
+
 const DEFAULT_PREFERENCES: UserPreferences = {
   display_name: '',
   theme: 'dark',
@@ -48,6 +64,8 @@ const LANGUAGES = [
 export default function Profile() {
   const [user, setUser] = useState<UserProfile | null>(null);
   const [preferences, setPreferences] = useState<UserPreferences>(DEFAULT_PREFERENCES);
+  const [recentOrders, setRecentOrders] = useState<Order[]>([]);
+  const [ordersLoading, setOrdersLoading] = useState(true);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
@@ -55,7 +73,36 @@ export default function Profile() {
 
   useEffect(() => {
     loadProfile();
+    loadRecentOrders();
   }, []);
+
+  const loadRecentOrders = async () => {
+    try {
+      const res = await client.entities.orders.query({
+        query: {},
+        sort: '-created_at',
+        limit: 3,
+      });
+      setRecentOrders(res?.data?.items || []);
+    } catch {
+      // Silently fail - orders section is supplementary
+    } finally {
+      setOrdersLoading(false);
+    }
+  };
+
+  const formatDate = (dateStr: string) => {
+    try {
+      const date = new Date(dateStr);
+      return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    } catch {
+      return dateStr;
+    }
+  };
+
+  const getStatusStyle = (status: string) => {
+    return STATUS_STYLES[status.toLowerCase()] || { bg: 'bg-slate-500/20', text: 'text-slate-400' };
+  };
 
   const loadProfile = async () => {
     try {
@@ -354,6 +401,75 @@ export default function Profile() {
                 onCheckedChange={(checked) => updatePreference('newsletter_subscribed', checked)}
               />
             </div>
+          </CardContent>
+        </Card>
+
+        {/* Recent Orders */}
+        <Card className="bg-slate-900 border-slate-700 mb-6">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <div>
+              <CardTitle className="text-white flex items-center gap-2">
+                <Package className="h-5 w-5 text-orange-400" />
+                Recent Orders
+              </CardTitle>
+              <CardDescription className="text-slate-400 mt-1">
+                Your latest order activity
+              </CardDescription>
+            </div>
+            <Link to="/orders">
+              <Button variant="ghost" size="sm" className="text-blue-400 hover:text-blue-300 hover:bg-slate-800">
+                View All
+                <ArrowRight className="h-4 w-4 ml-1" />
+              </Button>
+            </Link>
+          </CardHeader>
+          <CardContent>
+            {ordersLoading ? (
+              <div className="flex justify-center py-6">
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500" />
+              </div>
+            ) : recentOrders.length === 0 ? (
+              <div className="text-center py-6">
+                <Package className="h-10 w-10 text-slate-600 mx-auto mb-2" />
+                <p className="text-slate-500 text-sm">No orders yet</p>
+                <Link to="/products">
+                  <Button variant="link" className="text-blue-400 hover:text-blue-300 mt-1 text-sm p-0 h-auto">
+                    Start shopping →
+                  </Button>
+                </Link>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {recentOrders.map((order) => {
+                  const style = getStatusStyle(order.status);
+                  return (
+                    <div
+                      key={order.id}
+                      className="flex items-center justify-between p-3 rounded-lg bg-slate-800/50 hover:bg-slate-800 transition-colors cursor-pointer"
+                      onClick={() => navigate('/orders')}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="h-9 w-9 rounded-full bg-slate-700 flex items-center justify-center">
+                          <Package className="h-4 w-4 text-slate-300" />
+                        </div>
+                        <div>
+                          <p className="text-white text-sm font-medium">Order #{order.id}</p>
+                          <p className="text-slate-500 text-xs">{formatDate(order.created_at)}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <span className="text-white text-sm font-semibold">
+                          AED {Number(order.total_amount).toFixed(2)}
+                        </span>
+                        <Badge className={`${style.bg} ${style.text} border-0 text-xs capitalize`}>
+                          {order.status}
+                        </Badge>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </CardContent>
         </Card>
 
