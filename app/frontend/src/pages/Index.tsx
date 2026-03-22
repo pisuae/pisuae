@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ArrowRight, Cpu, HardDrive, Monitor, Battery, MemoryStick, Keyboard, Zap, Shield, Truck, Laptop, Smartphone, Shirt, Sparkles, Gift, ToyBrick, UtensilsCrossed, Sofa } from 'lucide-react';
+import { ArrowRight, Cpu, HardDrive, Monitor, Battery, MemoryStick, Keyboard, Zap, Shield, Truck, Laptop, Smartphone, Shirt, Sparkles, Gift, ToyBrick, UtensilsCrossed, Sofa, Watch, Home } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { toast } from 'sonner';
@@ -31,6 +31,8 @@ const categories = [
   { name: 'Toys', icon: ToyBrick, color: 'from-orange-500 to-orange-700' },
   { name: 'Kitchen', icon: UtensilsCrossed, color: 'from-teal-500 to-teal-700' },
   { name: 'Furniture', icon: Sofa, color: 'from-stone-500 to-stone-700' },
+  { name: 'Smartwatch', icon: Watch, color: 'from-sky-500 to-sky-700' },
+  { name: 'Smart Home', icon: Home, color: 'from-green-500 to-green-700' },
   { name: 'Phones', icon: Smartphone, color: 'from-rose-500 to-rose-700' },
   { name: 'Laptops', icon: Laptop, color: 'from-indigo-500 to-indigo-700' },
   { name: 'Motherboards', icon: Cpu, color: 'from-blue-500 to-blue-700' },
@@ -165,7 +167,7 @@ export default function Index() {
               You Need
             </h1>
             <p className="text-lg text-slate-300 max-w-lg">
-              From fashion & beauty to electronics, furniture, kitchen essentials, and kids toys — discover quality products at the best prices.
+              From fashion & beauty to smartwatches, smart home devices, electronics, furniture, kitchen essentials, and kids toys — discover quality products at the best prices.
             </p>
             <div className="flex flex-wrap gap-3">
               <Button
@@ -236,7 +238,7 @@ export default function Index() {
           {categories.map((cat) => (
             <Link
               key={cat.name}
-              to={`/products?category=${cat.name.toLowerCase()}`}
+              to={`/products?category=${cat.name.toLowerCase().replace(/\s+/g, '-')}`}
               className="group"
             >
               <Card className="bg-slate-800/50 border-slate-700/50 hover:border-blue-500/50 transition-all duration-300 hover:-translate-y-1">
