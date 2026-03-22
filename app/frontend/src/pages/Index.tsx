@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ArrowRight, Cpu, HardDrive, Monitor, Battery, MemoryStick, Keyboard, Zap, Shield, Truck, Laptop, Smartphone } from 'lucide-react';
+import { ArrowRight, Cpu, HardDrive, Monitor, Battery, MemoryStick, Keyboard, Zap, Shield, Truck, Laptop, Smartphone, Shirt, Sparkles, Gift, ToyBrick, UtensilsCrossed, Sofa } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { toast } from 'sonner';
@@ -25,6 +25,12 @@ interface Product {
 }
 
 const categories = [
+  { name: 'Clothing', icon: Shirt, color: 'from-fuchsia-500 to-fuchsia-700' },
+  { name: 'Makeup', icon: Sparkles, color: 'from-pink-400 to-pink-600' },
+  { name: 'Combo', icon: Gift, color: 'from-violet-500 to-violet-700' },
+  { name: 'Toys', icon: ToyBrick, color: 'from-orange-500 to-orange-700' },
+  { name: 'Kitchen', icon: UtensilsCrossed, color: 'from-teal-500 to-teal-700' },
+  { name: 'Furniture', icon: Sofa, color: 'from-stone-500 to-stone-700' },
   { name: 'Phones', icon: Smartphone, color: 'from-rose-500 to-rose-700' },
   { name: 'Laptops', icon: Laptop, color: 'from-indigo-500 to-indigo-700' },
   { name: 'Motherboards', icon: Cpu, color: 'from-blue-500 to-blue-700' },
@@ -149,17 +155,17 @@ export default function Index() {
           <div className="max-w-2xl space-y-6 mt-[0px] mr-[0px] mb-[0px] ml-[0px] pt-[0px] pr-[0px] pb-[0px] pl-[0px] rounded-none text-[16px] font-normal text-[#FFFFFF] bg-[#00000000] opacity-100">
             <div className="inline-flex items-center gap-2 px-4 py-2 border border-blue-500/20 mt-[0px] mr-[0px] mb-[0px] ml-[0px] pt-[8px] pr-[16px] pb-[8px] pl-[16px] rounded-full text-[14px] font-normal text-[#60A5FA] bg-[#3B82F61A] opacity-100">
               <Zap className="h-4 w-4" />
-              Premium Laptop Parts & Electronics
+              Your One-Stop Online Marketplace
             </div>
             <h1 className="md:text-6xl mt-[24px] mr-[0px] mb-[0px] ml-[0px] pt-[0px] pr-[0px] pb-[0px] pl-[0px] rounded-none text-[60px] font-bold text-[#FFFFFF] bg-[#00000000] opacity-100">
-              Find the Perfect{' '}
+              Shop{' '}
               <span className="bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent">
-                Parts
+                Everything
               </span>{' '}
-              for Your Tech
+              You Need
             </h1>
             <p className="text-lg text-slate-300 max-w-lg">
-              Browse thousands of laptop components, electronics, and accessories. New, refurbished, and used — all quality guaranteed.
+              From fashion & beauty to electronics, furniture, kitchen essentials, and kids toys — discover quality products at the best prices.
             </p>
             <div className="flex flex-wrap gap-3">
               <Button
@@ -226,7 +232,7 @@ export default function Index() {
             View All <ArrowRight className="h-4 w-4" />
           </Link>
         </div>
-        <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-4 lg:grid-cols-8 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-7 gap-3">
           {categories.map((cat) => (
             <Link
               key={cat.name}

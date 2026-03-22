@@ -1,130 +1,114 @@
 [
     {
-        "product_id": 11,
+        "product_id": 21,
         "rating": 5,
-        "review_text": "Absolutely stunning phone! The camera quality is incredible and the titanium design feels premium.",
-        "reviewer_name": "Sarah M.",
-        "user_id": "seed-user-001",
-        "created_at": "2026-03-20 10:00:00"
+        "review_text": "Absolutely gorgeous abaya! The gold embroidery is stunning and the fabric flows beautifully.",
+        "reviewer_name": "Fatima A.",
+        "user_id": "seed-user-017",
+        "created_at": "2026-03-22 09:00:00"
     },
     {
-        "product_id": 11,
+        "product_id": 21,
+        "rating": 5,
+        "review_text": "Perfect for Eid! Received so many compliments. The quality is exceptional.",
+        "reviewer_name": "Amina K.",
+        "user_id": "seed-user-018",
+        "created_at": "2026-03-21 14:00:00"
+    },
+    {
+        "product_id": 22,
         "rating": 4,
-        "review_text": "Great performance and battery life. The Pro Max is worth every penny.",
-        "reviewer_name": "James K.",
-        "user_id": "seed-user-002",
-        "created_at": "2026-03-19 14:30:00"
+        "review_text": "Beautiful navy abaya. The lace and pearl details are elegant. Very comfortable to wear.",
+        "reviewer_name": "Huda M.",
+        "user_id": "seed-user-019",
+        "created_at": "2026-03-22 10:30:00"
     },
     {
-        "product_id": 12,
+        "product_id": 23,
         "rating": 5,
-        "review_text": "The S Pen integration is seamless. Best Android phone I've ever used.",
-        "reviewer_name": "David L.",
-        "user_id": "seed-user-003",
-        "created_at": "2026-03-21 09:15:00"
+        "review_text": "The maroon color is rich and the floral embroidery is exquisite. Love the open front design!",
+        "reviewer_name": "Noor S.",
+        "user_id": "seed-user-020",
+        "created_at": "2026-03-21 16:00:00"
     },
     {
-        "product_id": 12,
+        "product_id": 24,
+        "rating": 5,
+        "review_text": "This Banarasi sari is a masterpiece! The zari work is authentic and the silk quality is superb.",
+        "reviewer_name": "Priya R.",
+        "user_id": "seed-user-021",
+        "created_at": "2026-03-22 08:00:00"
+    },
+    {
+        "product_id": 24,
+        "rating": 5,
+        "review_text": "Wore this to my sister's wedding and it was the highlight! Absolutely worth every penny.",
+        "reviewer_name": "Deepa N.",
+        "user_id": "seed-user-022",
+        "created_at": "2026-03-20 12:00:00"
+    },
+    {
+        "product_id": 25,
         "rating": 4,
-        "review_text": "Amazing display and camera. Galaxy AI features are genuinely useful.",
-        "reviewer_name": "Emily R.",
-        "user_id": "seed-user-004",
-        "created_at": "2026-03-20 16:45:00"
-    },
-    {
-        "product_id": 13,
-        "rating": 5,
-        "review_text": "Perfect size and great value. The iPhone 16 is a solid upgrade.",
-        "reviewer_name": "Mike T.",
-        "user_id": "seed-user-005",
+        "review_text": "The sequin work catches the light beautifully. Very lightweight and easy to drape.",
+        "reviewer_name": "Sneha P.",
+        "user_id": "seed-user-023",
         "created_at": "2026-03-21 11:00:00"
     },
     {
-        "product_id": 13,
-        "rating": 4,
-        "review_text": "Love the new Camera Control button. Makes photography so much easier.",
-        "reviewer_name": "Anna P.",
-        "user_id": "seed-user-006",
-        "created_at": "2026-03-19 08:20:00"
-    },
-    {
-        "product_id": 14,
-        "rating": 4,
-        "review_text": "Compact and powerful. Samsung really nailed it with the S25.",
-        "reviewer_name": "Chris W.",
-        "user_id": "seed-user-007",
-        "created_at": "2026-03-20 13:00:00"
-    },
-    {
-        "product_id": 15,
+        "product_id": 26,
         "rating": 5,
-        "review_text": "The battery life is insane! 5850mAh with fast charging is a game changer.",
-        "reviewer_name": "Lisa H.",
-        "user_id": "seed-user-008",
-        "created_at": "2026-03-21 15:30:00"
+        "review_text": "Authentic Kanjivaram quality! The temple border is traditional and the green is vibrant.",
+        "reviewer_name": "Lakshmi V.",
+        "user_id": "seed-user-024",
+        "created_at": "2026-03-22 07:00:00"
     },
     {
-        "product_id": 15,
-        "rating": 4,
-        "review_text": "Honor Magic 7 Pro punches way above its price. Excellent value.",
-        "reviewer_name": "Tom B.",
-        "user_id": "seed-user-009",
-        "created_at": "2026-03-18 10:45:00"
-    },
-    {
-        "product_id": 16,
+        "product_id": 27,
         "rating": 5,
-        "review_text": "The variable aperture camera is revolutionary. Best phone camera I've used.",
-        "reviewer_name": "Rachel G.",
-        "user_id": "seed-user-010",
-        "created_at": "2026-03-20 09:00:00"
+        "review_text": "The chikan embroidery is delicate and beautiful. So comfortable for daily wear!",
+        "reviewer_name": "Ayesha B.",
+        "user_id": "seed-user-025",
+        "created_at": "2026-03-22 09:30:00"
     },
     {
-        "product_id": 17,
+        "product_id": 27,
         "rating": 4,
-        "review_text": "The foldable experience is incredible. Using it as a mini tablet is amazing.",
-        "reviewer_name": "Kevin S.",
-        "user_id": "seed-user-011",
-        "created_at": "2026-03-19 17:00:00"
+        "review_text": "Lovely pink color and the dupatta matches perfectly. Great value for money.",
+        "reviewer_name": "Zara H.",
+        "user_id": "seed-user-026",
+        "created_at": "2026-03-21 15:00:00"
     },
     {
-        "product_id": 17,
+        "product_id": 28,
         "rating": 5,
-        "review_text": "Z Fold 6 is the best foldable on the market. Period.",
-        "reviewer_name": "Nicole F.",
-        "user_id": "seed-user-012",
-        "created_at": "2026-03-21 12:30:00"
+        "review_text": "The mirror work is stunning! Perfect for festive occasions. Got so many compliments!",
+        "reviewer_name": "Sana Q.",
+        "user_id": "seed-user-027",
+        "created_at": "2026-03-22 11:00:00"
     },
     {
-        "product_id": 18,
-        "rating": 5,
-        "review_text": "The Desert Titanium color is gorgeous. Performance is top-notch.",
-        "reviewer_name": "Alex D.",
-        "user_id": "seed-user-013",
-        "created_at": "2026-03-20 14:15:00"
-    },
-    {
-        "product_id": 19,
+        "product_id": 29,
         "rating": 4,
-        "review_text": "Thinnest foldable I've held. Honor really pushed the boundaries.",
-        "reviewer_name": "Maria C.",
-        "user_id": "seed-user-014",
-        "created_at": "2026-03-19 11:30:00"
+        "review_text": "Love the digital print design. Very modern and comfortable for everyday wear.",
+        "reviewer_name": "Maryam T.",
+        "user_id": "seed-user-028",
+        "created_at": "2026-03-21 13:00:00"
     },
     {
-        "product_id": 20,
+        "product_id": 30,
         "rating": 5,
-        "review_text": "Mate 70 Pro is a powerhouse. HarmonyOS is smooth and feature-rich.",
-        "reviewer_name": "Daniel J.",
-        "user_id": "seed-user-015",
-        "created_at": "2026-03-21 08:00:00"
+        "review_text": "The zardozi embroidery is exquisite! Perfect formal wear for special occasions.",
+        "reviewer_name": "Rabia F.",
+        "user_id": "seed-user-029",
+        "created_at": "2026-03-22 10:00:00"
     },
     {
-        "product_id": 20,
-        "rating": 4,
-        "review_text": "Excellent build quality and camera. The satellite messaging is a nice bonus.",
-        "reviewer_name": "Sophie L.",
-        "user_id": "seed-user-016",
-        "created_at": "2026-03-18 16:00:00"
+        "product_id": 30,
+        "rating": 5,
+        "review_text": "Elegant white with golden embroidery - a timeless combination. Highly recommend!",
+        "reviewer_name": "Khadija W.",
+        "user_id": "seed-user-030",
+        "created_at": "2026-03-20 17:00:00"
     }
 ]
