@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { User, Mail, Save, ArrowLeft, Bell, Moon, Sun, Globe, Newspaper, Check, Package, ArrowRight, DollarSign, TrendingUp, ShoppingBag, BarChart3 } from 'lucide-react';
+import { User, Mail, Save, ArrowLeft, Bell, Moon, Sun, Globe, Newspaper, Check, Package, ArrowRight, DollarSign, TrendingUp, ShoppingBag, BarChart3, Download } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -244,6 +244,47 @@ export default function Profile() {
     }));
   }, [allOrders]);
 
+  const exportSpendingCSV = () => {
+    const now = new Date();
+    const sixMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 5, 1);
+
+    const ordersInRange = allOrders.filter((o) => {
+      try {
+        return new Date(o.created_at) >= sixMonthsAgo;
+      } catch {
+        return false;
+      }
+    });
+
+    if (ordersInRange.length === 0) {
+      toast.info('No orders in the last 6 months to export');
+      return;
+    }
+
+    const headers = ['Order ID', 'Date', 'Amount (AED)', 'Status'];
+    const rows = ordersInRange.map((o) => [
+      String(o.id),
+      formatDate(o.created_at),
+      Number(o.total_amount || 0).toFixed(2),
+      o.status || 'unknown',
+    ]);
+
+    const csvContent = [headers, ...rows]
+      .map((row) => row.map((cell) => `"${cell}"`).join(','))
+      .join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `spending-report-${now.toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    toast.success('Spending report downloaded!');
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-slate-950">
@@ -387,42 +428,55 @@ export default function Profile() {
                 <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500" />
               </div>
             ) : (
-              <div className="h-40 w-full">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={monthlySpending} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#334155" vertical={false} />
-                    <XAxis
-                      dataKey="name"
-                      tick={{ fill: '#94a3b8', fontSize: 12 }}
-                      axisLine={{ stroke: '#475569' }}
-                      tickLine={false}
-                    />
-                    <YAxis
-                      tick={{ fill: '#94a3b8', fontSize: 11 }}
-                      axisLine={false}
-                      tickLine={false}
-                      tickFormatter={(v: number) => (v >= 1000 ? `${(v / 1000).toFixed(0)}k` : String(v))}
-                    />
-                    <Tooltip
-                      contentStyle={{
-                        backgroundColor: '#1e293b',
-                        border: '1px solid #475569',
-                        borderRadius: '8px',
-                        color: '#f1f5f9',
-                        fontSize: '13px',
-                      }}
-                      formatter={(value: number) => [`AED ${value.toFixed(2)}`, 'Spent']}
-                      cursor={{ fill: 'rgba(148, 163, 184, 0.1)' }}
-                    />
-                    <Bar
-                      dataKey="amount"
-                      fill="#06b6d4"
-                      radius={[4, 4, 0, 0]}
-                      maxBarSize={40}
-                    />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
+              <>
+                <div className="h-40 w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={monthlySpending} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#334155" vertical={false} />
+                      <XAxis
+                        dataKey="name"
+                        tick={{ fill: '#94a3b8', fontSize: 12 }}
+                        axisLine={{ stroke: '#475569' }}
+                        tickLine={false}
+                      />
+                      <YAxis
+                        tick={{ fill: '#94a3b8', fontSize: 11 }}
+                        axisLine={false}
+                        tickLine={false}
+                        tickFormatter={(v: number) => (v >= 1000 ? `${(v / 1000).toFixed(0)}k` : String(v))}
+                      />
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: '#1e293b',
+                          border: '1px solid #475569',
+                          borderRadius: '8px',
+                          color: '#f1f5f9',
+                          fontSize: '13px',
+                        }}
+                        formatter={(value: number) => [`AED ${value.toFixed(2)}`, 'Spent']}
+                        cursor={{ fill: 'rgba(148, 163, 184, 0.1)' }}
+                      />
+                      <Bar
+                        dataKey="amount"
+                        fill="#06b6d4"
+                        radius={[4, 4, 0, 0]}
+                        maxBarSize={40}
+                      />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+                <div className="flex justify-end mt-4">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={exportSpendingCSV}
+                    className="border-slate-600 text-slate-300 hover:text-white hover:bg-slate-800 hover:border-slate-500"
+                  >
+                    <Download className="h-4 w-4 mr-2" />
+                    Export CSV
+                  </Button>
+                </div>
+              </>
             )}
           </CardContent>
         </Card>
