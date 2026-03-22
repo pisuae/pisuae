@@ -13,6 +13,7 @@ import VendorAnalytics from './pages/VendorAnalytics';
 import Profile from './pages/Profile';
 import AuthCallback from './pages/AuthCallback';
 import AuthError from './pages/AuthError';
+import ChatBot from './components/ChatBot';
 
 const queryClient = new QueryClient();
 
@@ -34,6 +35,7 @@ const App = () => (
           <Route path="/auth/callback" element={<AuthCallback />} />
           <Route path="/auth/error" element={<AuthError />} />
         </Routes>
+        <ChatBot />
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>

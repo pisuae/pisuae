@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 import Header from '@/components/Header';
 import { client } from '@/lib/api';
-import { withRetry } from '@/lib/retry';
+import { withRetry, withRetryQuiet } from '@/lib/retry';
 import { resolveImageUrl } from '@/lib/image';
 
 interface Product {
@@ -149,11 +149,30 @@ export default function ProductDetail() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   useEffect(() => {
-    loadProduct();
-    loadCartCount();
-    loadReviews();
-    loadRating();
-    checkAuth();
+    let cancelled = false;
+
+    const loadAll = async () => {
+      // Load product first (critical)
+      await loadProduct();
+      if (cancelled) return;
+      // Stagger non-critical calls to avoid simultaneous Lambda DNS resolution issues
+      await new Promise((r) => setTimeout(r, 400));
+      if (cancelled) return;
+      checkAuth();
+      // Stagger further
+      await new Promise((r) => setTimeout(r, 300));
+      if (cancelled) return;
+      loadReviews();
+      await new Promise((r) => setTimeout(r, 300));
+      if (cancelled) return;
+      loadRating();
+      await new Promise((r) => setTimeout(r, 300));
+      if (cancelled) return;
+      loadCartCount();
+    };
+
+    loadAll();
+    return () => { cancelled = true; };
   }, [id]);
 
   const checkAuth = async () => {
@@ -203,17 +222,18 @@ export default function ProductDetail() {
     if (!id) return;
     setReviewsLoading(true);
     try {
-      const res = await withRetry(() =>
-        client.apiCall.invoke({
-          url: `/api/v1/reviews/product/${id}`,
-          method: 'GET',
-        })
+      // Use quiet retry - reviews are non-critical, page works without them
+      const res = await withRetryQuiet(
+        () =>
+          client.apiCall.invoke({
+            url: `/api/v1/reviews/product/${id}`,
+            method: 'GET',
+          }),
+        { data: { items: [], total: 0 } } as any
       );
       const data = res?.data;
       setReviews(data?.items || []);
       setReviewsTotal(data?.total || 0);
-    } catch (err) {
-      console.error('Failed to load reviews:', err);
     } finally {
       setReviewsLoading(false);
     }
@@ -221,19 +241,18 @@ export default function ProductDetail() {
 
   const loadRating = async () => {
     if (!id) return;
-    try {
-      const res = await withRetry(() =>
+    // Use quiet retry - rating display is non-critical
+    const res = await withRetryQuiet(
+      () =>
         client.apiCall.invoke({
           url: `/api/v1/reviews/rating/${id}`,
           method: 'GET',
-        })
-      );
-      const data = res?.data;
-      setAvgRating(data?.average_rating || 0);
-      setReviewCount(data?.review_count || 0);
-    } catch (err) {
-      console.error('Failed to load rating:', err);
-    }
+        }),
+      { data: { average_rating: 0, review_count: 0 } } as any
+    );
+    const data = res?.data;
+    setAvgRating(data?.average_rating || 0);
+    setReviewCount(data?.review_count || 0);
   };
 
   const loadCartCount = async () => {

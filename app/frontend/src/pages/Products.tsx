@@ -9,7 +9,7 @@ import { toast } from 'sonner';
 import Header from '@/components/Header';
 import ProductCard from '@/components/ProductCard';
 import { client } from '@/lib/api';
-import { withRetry } from '@/lib/retry';
+import { withRetry, withRetryQuiet } from '@/lib/retry';
 
 interface Product {
   id: number;
@@ -54,31 +54,34 @@ export default function Products() {
   }, [selectedCategory, selectedCondition, sortBy]);
 
   useEffect(() => {
-    loadCartCount();
+    // Stagger cart count to avoid simultaneous Lambda DNS resolution issues
+    const timer = setTimeout(() => loadCartCount(), 600);
+    return () => clearTimeout(timer);
   }, []);
 
   const loadBulkRatings = async (productIds: number[]) => {
     if (productIds.length === 0) return;
-    try {
-      const res = await withRetry(() =>
+    // Stagger ratings call to avoid simultaneous Lambda DNS resolution issues
+    await new Promise((r) => setTimeout(r, 800));
+    // Use quiet retry - ratings are non-critical UI enhancement
+    const res = await withRetryQuiet(
+      () =>
         client.apiCall.invoke({
           url: '/api/v1/reviews/ratings/bulk',
           method: 'GET',
           data: { product_ids: productIds.join(',') },
-        })
-      );
-      const items = res?.data?.ratings || [];
-      const map: Record<number, RatingInfo> = {};
-      for (const item of items) {
-        map[item.product_id] = {
-          average_rating: item.average_rating,
-          review_count: item.review_count,
-        };
-      }
-      setRatings(map);
-    } catch (err) {
-      console.error('Failed to load ratings:', err);
+        }),
+      { data: { ratings: [] } } as any
+    );
+    const items = res?.data?.ratings || [];
+    const map: Record<number, RatingInfo> = {};
+    for (const item of items) {
+      map[item.product_id] = {
+        average_rating: item.average_rating,
+        review_count: item.review_count,
+      };
     }
+    setRatings(map);
   };
 
   const loadProducts = async () => {
