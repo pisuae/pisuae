@@ -1,6 +1,9 @@
 /**
  * Retry utility with exponential backoff for handling transient network errors
  * like DNS resolution failures, timeout issues, and 500 status responses.
+ *
+ * Includes a global request serializer to prevent concurrent Lambda DNS resolution
+ * issues ("failed the initial dns/balancer resolve" / "could not acquire callback lock: timeout").
  */
 
 const RETRYABLE_KEYWORDS = [
@@ -19,6 +22,12 @@ const RETRYABLE_KEYWORDS = [
   'service unavailable',
   'bad gateway',
   'gateway timeout',
+  'load balancer',
+  'connection reset',
+  'socket hang up',
+  'aborted',
+  'econnreset',
+  'epipe',
 ];
 
 function containsRetryableKeyword(text: string): boolean {
@@ -48,6 +57,10 @@ function isRetryableError(error: unknown): boolean {
       obj.message ??
       (obj.data && typeof obj.data === 'object' ? (obj.data as Record<string, unknown>).message : undefined);
     if (typeof message === 'string' && containsRetryableKeyword(message)) return true;
+
+    // Check nested url field for lambda-url pattern
+    const url = obj.url;
+    if (typeof url === 'string' && containsRetryableKeyword(url)) return true;
   }
 
   return false;
@@ -78,24 +91,75 @@ function isRetryableResponse(response: unknown): boolean {
   return false;
 }
 
+/**
+ * Global request queue to serialize API calls and prevent concurrent DNS resolution
+ * issues with Lambda cold starts. This ensures only one request is in-flight at a time,
+ * giving the DNS resolver time to complete before the next request starts.
+ */
+class RequestQueue {
+  private queue: Array<{
+    fn: () => Promise<unknown>;
+    resolve: (value: unknown) => void;
+    reject: (error: unknown) => void;
+  }> = [];
+  private running = 0;
+  private maxConcurrent = 2; // Allow limited concurrency to balance speed vs DNS stability
+  private cooldownMs = 150; // Small delay between requests to ease DNS pressure
+
+  async enqueue<T>(fn: () => Promise<T>): Promise<T> {
+    return new Promise<T>((resolve, reject) => {
+      this.queue.push({
+        fn: fn as () => Promise<unknown>,
+        resolve: resolve as (value: unknown) => void,
+        reject,
+      });
+      this.processNext();
+    });
+  }
+
+  private async processNext() {
+    if (this.running >= this.maxConcurrent || this.queue.length === 0) return;
+
+    const item = this.queue.shift();
+    if (!item) return;
+
+    this.running++;
+    try {
+      const result = await item.fn();
+      item.resolve(result);
+    } catch (error) {
+      item.reject(error);
+    } finally {
+      this.running--;
+      // Add a small cooldown between requests to prevent DNS resolution storms
+      if (this.queue.length > 0) {
+        setTimeout(() => this.processNext(), this.cooldownMs);
+      }
+    }
+  }
+}
+
+const globalQueue = new RequestQueue();
+
 export async function withRetry<T>(
   fn: () => Promise<T>,
   maxRetries: number = 4,
-  baseDelayMs: number = 2000
+  baseDelayMs: number = 2500
 ): Promise<T> {
   let lastError: unknown;
   let lastResult: T | undefined;
 
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
-      const result = await fn();
+      // Route through the global queue to prevent concurrent DNS issues
+      const result = await globalQueue.enqueue(fn) as T;
 
       // Check if the resolved result is actually a retryable error response
       if (isRetryableResponse(result)) {
         lastResult = result;
         if (attempt < maxRetries) {
           // Use jittered exponential backoff: base * 2^attempt + random jitter
-          const delay = baseDelayMs * Math.pow(2, attempt) + Math.random() * 1000;
+          const delay = baseDelayMs * Math.pow(2, attempt) + Math.random() * 1500;
           console.warn(
             `[Retry] Attempt ${attempt + 1}/${maxRetries} got retryable response (status 5xx / DNS error). Retrying in ${Math.round(delay)}ms...`
           );
@@ -111,7 +175,7 @@ export async function withRetry<T>(
       lastError = error;
 
       if (attempt < maxRetries && isRetryableError(error)) {
-        const delay = baseDelayMs * Math.pow(2, attempt) + Math.random() * 1000;
+        const delay = baseDelayMs * Math.pow(2, attempt) + Math.random() * 1500;
         console.warn(
           `[Retry] Attempt ${attempt + 1}/${maxRetries} failed with retryable error. Retrying in ${Math.round(delay)}ms...`,
           error instanceof Error ? error.message : error
@@ -136,10 +200,16 @@ export async function withRetryQuiet<T>(
   fn: () => Promise<T>,
   fallback: T,
   maxRetries: number = 5,
-  baseDelayMs: number = 2500
+  baseDelayMs: number = 3000
 ): Promise<T> {
   try {
-    return await withRetry(fn, maxRetries, baseDelayMs);
+    const result = await withRetry(fn, maxRetries, baseDelayMs);
+    // Extra safety: if the result is still a retryable error response, return fallback
+    if (isRetryableResponse(result)) {
+      console.warn('[RetryQuiet] Got retryable response after all retries, returning fallback.');
+      return fallback;
+    }
+    return result;
   } catch {
     console.warn('[RetryQuiet] All retries exhausted, returning fallback value.');
     return fallback;

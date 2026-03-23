@@ -155,18 +155,18 @@ export default function ProductDetail() {
       // Load product first (critical)
       await loadProduct();
       if (cancelled) return;
-      // Stagger non-critical calls to avoid simultaneous Lambda DNS resolution issues
-      await new Promise((r) => setTimeout(r, 400));
+      // Stagger non-critical calls with longer delays to avoid simultaneous Lambda DNS resolution issues
+      // The global request queue in retry.ts also serializes concurrent requests
+      await new Promise((r) => setTimeout(r, 600));
       if (cancelled) return;
       checkAuth();
-      // Stagger further
-      await new Promise((r) => setTimeout(r, 300));
+      await new Promise((r) => setTimeout(r, 500));
       if (cancelled) return;
       loadReviews();
-      await new Promise((r) => setTimeout(r, 300));
+      await new Promise((r) => setTimeout(r, 500));
       if (cancelled) return;
       loadRating();
-      await new Promise((r) => setTimeout(r, 300));
+      await new Promise((r) => setTimeout(r, 500));
       if (cancelled) return;
       loadCartCount();
     };

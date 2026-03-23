@@ -61,9 +61,10 @@ export default function Products() {
 
   const loadBulkRatings = async (productIds: number[]) => {
     if (productIds.length === 0) return;
-    // Stagger ratings call to avoid simultaneous Lambda DNS resolution issues
-    await new Promise((r) => setTimeout(r, 800));
+    // Stagger ratings call significantly to avoid simultaneous Lambda DNS resolution issues
+    await new Promise((r) => setTimeout(r, 1200));
     // Use quiet retry - ratings are non-critical UI enhancement
+    // The global request queue in retry.ts will serialize this with other in-flight requests
     const res = await withRetryQuiet(
       () =>
         client.apiCall.invoke({
