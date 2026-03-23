@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ArrowRight, Cpu, HardDrive, Monitor, Battery, MemoryStick, Keyboard, Zap, Shield, Truck, Laptop, Smartphone, Shirt, Sparkles, Gift, ToyBrick, UtensilsCrossed, Sofa, Watch, Home } from 'lucide-react';
+import { ArrowRight, Cpu, HardDrive, Monitor, Battery, MemoryStick, Keyboard, Zap, Shield, Truck, Laptop, Smartphone, Shirt, Sparkles, Gift, ToyBrick, UtensilsCrossed, Sofa, Watch, Home, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { toast } from 'sonner';
@@ -54,14 +54,34 @@ export default function Index() {
   const [cartCount, setCartCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [ratings, setRatings] = useState<Record<number, RatingInfo>>({});
+  const [user, setUser] = useState<any>(null);
+  const [authChecked, setAuthChecked] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
     // Load products first, then stagger other calls to reduce simultaneous Lambda DNS hits
     loadFeaturedProducts();
+    checkAuth();
     const timer = setTimeout(() => loadCartCount(), 800);
     return () => clearTimeout(timer);
   }, []);
+
+  const checkAuth = async () => {
+    try {
+      const res = await withRetry(() => client.auth.me());
+      if (res?.data) {
+        setUser(res.data);
+      }
+    } catch {
+      // Not logged in
+    } finally {
+      setAuthChecked(true);
+    }
+  };
+
+  const handleSignUp = async () => {
+    await client.auth.toLogin();
+  };
 
   const loadBulkRatings = async (productIds: number[]) => {
     if (productIds.length === 0) return;
@@ -205,6 +225,46 @@ export default function Index() {
           </div>
         </div>
       </section>
+
+      {/* Sign Up / Login Banner for non-authenticated users */}
+      {authChecked && !user && (
+        <section className="relative overflow-hidden border-b border-blue-500/20">
+          <div className="absolute inset-0 bg-gradient-to-r from-blue-900/30 via-indigo-900/20 to-purple-900/30" />
+          <div className="relative container mx-auto px-4 py-8">
+            <div className="flex flex-col md:flex-row items-center justify-between gap-6">
+              <div className="flex items-center gap-4">
+                <div className="flex h-14 w-14 items-center justify-center rounded-full bg-blue-500/20 border border-blue-500/30">
+                  <User className="h-7 w-7 text-blue-400" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold text-white">New here? Create your account!</h3>
+                  <p className="text-slate-300 text-sm mt-1">
+                    Sign up to start shopping, track orders, and get exclusive deals.
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <Button
+                  onClick={handleSignUp}
+                  size="lg"
+                  className="bg-blue-600 hover:bg-blue-500 text-white px-8 font-semibold shadow-lg shadow-blue-500/25"
+                >
+                  <User className="h-4 w-4 mr-2" />
+                  Sign Up Free
+                </Button>
+                <Button
+                  onClick={handleSignUp}
+                  size="lg"
+                  variant="outline"
+                  className="border-slate-500 text-slate-200 hover:bg-slate-800 hover:text-white px-8"
+                >
+                  Sign In
+                </Button>
+              </div>
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* Features Bar */}
       <section className="border-y border-slate-800 bg-slate-900/50">

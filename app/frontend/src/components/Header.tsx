@@ -176,9 +176,14 @@ export default function Header({ cartCount = 0, onSearch }: HeaderProps) {
               </DropdownMenuContent>
             </DropdownMenu>
           ) : (
-            <Button onClick={handleLogin} size="sm" className="bg-blue-600 hover:bg-blue-500 text-white">
-              Sign In
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button onClick={handleLogin} size="sm" variant="outline" className="border-slate-600 text-slate-200 hover:bg-slate-800 hover:text-white">
+                Sign In
+              </Button>
+              <Button onClick={handleLogin} size="sm" className="bg-blue-600 hover:bg-blue-500 text-white">
+                Sign Up
+              </Button>
+            </div>
           )}
         </div>
       </div>
