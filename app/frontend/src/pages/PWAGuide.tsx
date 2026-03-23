@@ -189,7 +189,7 @@ export default function PWAGuide() {
               Install PIS UAE on Your Device
             </h1>
             <p className="text-slate-400 text-base sm:text-lg max-w-2xl">
-              Get the full app experience right on your Android device, or publish to the Google Play Store using Trusted Web Activity (TWA).
+              Get the full app experience on your Android or iOS device, or publish to the Google Play Store using Trusted Web Activity (TWA).
             </p>
           </div>
         </div>
@@ -250,7 +250,158 @@ export default function PWAGuide() {
             </div>
           </div>
 
-          {/* Divider */}
+          {/* Divider between Android and iOS */}
+          <div className="flex items-center gap-4">
+            <div className="flex-1 h-px bg-gradient-to-r from-transparent via-slate-700 to-transparent" />
+            <span className="text-xs text-slate-500 font-medium uppercase tracking-wider">iOS Users</span>
+            <div className="flex-1 h-px bg-gradient-to-r from-transparent via-slate-700 to-transparent" />
+          </div>
+
+          {/* Section B: Install on iOS */}
+          <div>
+            <div className="flex items-center gap-2.5 mb-5">
+              <Smartphone className="h-5 w-5 text-purple-400" />
+              <h2 className="text-xl font-bold text-white">Part B: Install PWA on iOS (iPhone & iPad)</h2>
+            </div>
+
+            <InfoBox type="info">
+              On iOS, PWAs can only be installed through <strong>Safari</strong>. Chrome, Firefox, and other browsers on iOS do not support the "Add to Home Screen" PWA feature.
+            </InfoBox>
+
+            <div className="space-y-3 mt-4">
+              <Step number={1} title="Open the Website in Safari" icon={<Globe className="h-4 w-4 text-purple-400" />}>
+                <p>Open <strong className="text-white">Safari</strong> on your iPhone or iPad and navigate to:</p>
+                <CodeBlock code={`${window.location.origin}`} />
+                <div className="rounded-xl overflow-hidden border border-slate-700/50 my-3">
+                  <img
+                    src="https://mgx-backend-cdn.metadl.com/generate/images/1040407/2026-03-22/1dad7f74-434b-4b93-ba78-c01771c0d075.png"
+                    alt="Safari browser with share button highlighted"
+                    className="w-full h-auto"
+                    loading="lazy"
+                  />
+                  <div className="bg-slate-800/80 px-4 py-2.5 border-t border-slate-700/50">
+                    <p className="text-xs text-slate-400 flex items-center gap-1.5">
+                      <Info className="h-3 w-3 text-blue-400" />
+                      Look for the <strong className="text-white">Share button</strong> (square with an upward arrow) at the bottom center of Safari
+                    </p>
+                  </div>
+                </div>
+                <InfoBox type="warning">
+                  Make sure you're using <strong>Safari</strong> — not Chrome, Firefox, or any other browser. iOS only supports PWA installation through Safari.
+                </InfoBox>
+              </Step>
+
+              <Step number={2} title="Tap the Share Button" icon={<ExternalLink className="h-4 w-4 text-purple-400" />}>
+                <p>Locate and tap the <strong className="text-white">Share button</strong> at the bottom of the Safari toolbar:</p>
+                <ul className="space-y-2 ml-1 mt-2">
+                  <li className="flex items-start gap-2">
+                    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-purple-500/20 text-purple-400 text-xs font-bold">1</span>
+                    <span>The Share button looks like a <strong className="text-white">square with an upward arrow</strong> (⬆️)</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-purple-500/20 text-purple-400 text-xs font-bold">2</span>
+                    <span>It's located at the <strong className="text-white">bottom center</strong> of the Safari toolbar</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-purple-500/20 text-purple-400 text-xs font-bold">3</span>
+                    <span>If the toolbar is hidden, tap the bottom of the screen to reveal it</span>
+                  </li>
+                </ul>
+                <InfoBox type="info">
+                  On iPad, the Share button may be in the <strong>top-right corner</strong> of the Safari toolbar instead of the bottom.
+                </InfoBox>
+              </Step>
+
+              <Step number={3} title="Select 'Add to Home Screen'" icon={<Download className="h-4 w-4 text-purple-400" />}>
+                <p>In the Share sheet that appears, scroll down and tap <strong className="text-white">"Add to Home Screen"</strong>:</p>
+                <div className="rounded-xl overflow-hidden border border-slate-700/50 my-3">
+                  <img
+                    src="https://mgx-backend-cdn.metadl.com/generate/images/1040407/2026-03-22/1b688f6b-31a1-47ca-b1df-7166ef1feaa7.png"
+                    alt="Safari share sheet with Add to Home Screen option"
+                    className="w-full h-auto"
+                    loading="lazy"
+                  />
+                  <div className="bg-slate-800/80 px-4 py-2.5 border-t border-slate-700/50">
+                    <p className="text-xs text-slate-400 flex items-center gap-1.5">
+                      <Info className="h-3 w-3 text-blue-400" />
+                      Scroll down in the share sheet to find <strong className="text-white">"Add to Home Screen"</strong> with a <strong className="text-white">+ icon</strong>
+                    </p>
+                  </div>
+                </div>
+                <ul className="space-y-2 ml-1 mt-2">
+                  <li className="flex items-start gap-2">
+                    <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0 mt-0.5" />
+                    <span>You may need to <strong className="text-white">scroll down</strong> in the share sheet to find this option</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0 mt-0.5" />
+                    <span>If you don't see it, scroll to the bottom and tap <strong className="text-white">"Edit Actions"</strong> to add it to your favorites</span>
+                  </li>
+                </ul>
+              </Step>
+
+              <Step number={4} title="Confirm the App Name & Tap 'Add'" icon={<CheckCircle2 className="h-4 w-4 text-purple-400" />}>
+                <p>A confirmation dialog will appear showing:</p>
+                <ul className="space-y-2 ml-1 mt-2">
+                  <li className="flex items-start gap-2">
+                    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-purple-500/20 text-purple-400 text-xs font-bold">•</span>
+                    <span><strong className="text-white">App icon</strong> — Preview of the home screen icon</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-purple-500/20 text-purple-400 text-xs font-bold">•</span>
+                    <span><strong className="text-white">App name</strong> — You can edit this (defaults to "PIS UAE")</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-purple-500/20 text-purple-400 text-xs font-bold">•</span>
+                    <span><strong className="text-white">URL</strong> — The website address</span>
+                  </li>
+                </ul>
+                <p className="mt-3">Tap <strong className="text-white">"Add"</strong> in the top-right corner to complete the installation.</p>
+              </Step>
+
+              <Step number={5} title="Launch from Home Screen" icon={<Rocket className="h-4 w-4 text-purple-400" />}>
+                <p>Find the <strong className="text-white">PIS UAE</strong> icon on your home screen and tap to launch!</p>
+                <div className="rounded-xl overflow-hidden border border-slate-700/50 my-3">
+                  <img
+                    src="https://mgx-backend-cdn.metadl.com/generate/images/1040407/2026-03-22/61036997-7d1f-41c2-8c70-fed31e78df43.png"
+                    alt="iPhone home screen with PIS UAE app icon"
+                    className="w-full h-auto"
+                    loading="lazy"
+                  />
+                  <div className="bg-slate-800/80 px-4 py-2.5 border-t border-slate-700/50">
+                    <p className="text-xs text-slate-400 flex items-center gap-1.5">
+                      <Info className="h-3 w-3 text-emerald-400" />
+                      The app will appear on your home screen just like a native app
+                    </p>
+                  </div>
+                </div>
+                <p className="font-medium text-white mt-2">What you'll get:</p>
+                <ul className="space-y-1.5 ml-1 mt-1">
+                  <li className="flex items-start gap-2">
+                    <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0 mt-0.5" />
+                    Full-screen experience without Safari's address bar
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0 mt-0.5" />
+                    App appears in the iOS App Switcher
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0 mt-0.5" />
+                    Cached pages for faster loading
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0 mt-0.5" />
+                    Dedicated app icon on your home screen
+                  </li>
+                </ul>
+                <InfoBox type="warning">
+                  <strong>iOS limitations:</strong> Unlike Android, iOS PWAs do not support push notifications (prior to iOS 16.4), background sync, or Bluetooth access. On iOS 16.4+, push notifications are supported for added-to-home-screen PWAs.
+                </InfoBox>
+              </Step>
+            </div>
+          </div>
+
+          {/* Divider before developer section */}
           <div className="flex items-center gap-4">
             <div className="flex-1 h-px bg-gradient-to-r from-transparent via-slate-700 to-transparent" />
             <span className="text-xs text-slate-500 font-medium uppercase tracking-wider">For Developers</span>
@@ -261,7 +412,7 @@ export default function PWAGuide() {
           <div>
             <div className="flex items-center gap-2.5 mb-5">
               <Store className="h-5 w-5 text-purple-400" />
-              <h2 className="text-xl font-bold text-white">Part B: Publish to Google Play Store (TWA)</h2>
+              <h2 className="text-xl font-bold text-white">Part C: Publish to Google Play Store (TWA)</h2>
             </div>
 
             <div className="space-y-3">
