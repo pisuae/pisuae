@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ArrowRight, Cpu, HardDrive, Monitor, Battery, MemoryStick, Keyboard, Zap, Shield, Truck, Laptop, Smartphone, Shirt, Sparkles, Gift, ToyBrick, UtensilsCrossed, Sofa, Watch, Home, User, ChevronUp, Grid3X3, Star, Tag, Search, X } from 'lucide-react';
+import { ArrowRight, Cpu, HardDrive, Monitor, Battery, MemoryStick, Keyboard, Zap, Shield, Truck, Laptop, Smartphone, Shirt, Sparkles, Gift, ToyBrick, UtensilsCrossed, Sofa, Watch, Home, User, ChevronUp, Grid3X3, Star, Tag, Search, X, Clock, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { toast } from 'sonner';
@@ -60,6 +60,9 @@ export default function Index() {
   const [showJumpNav, setShowJumpNav] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [recentSearches, setRecentSearches] = useState<{ id: number; query: string }[]>([]);
+  const [showRecentSearches, setShowRecentSearches] = useState(false);
+  const searchContainerRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
 
   const sections = [
@@ -75,6 +78,27 @@ export default function Index() {
     checkAuth();
     const timer = setTimeout(() => loadCartCount(), 800);
     return () => clearTimeout(timer);
+  }, []);
+
+  // Load recent searches when search bar opens
+  useEffect(() => {
+    if (searchOpen) {
+      setShowRecentSearches(true);
+      loadRecentSearches();
+    } else {
+      setShowRecentSearches(false);
+    }
+  }, [searchOpen, loadRecentSearches]);
+
+  // Close recent searches dropdown on outside click
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (searchContainerRef.current && !searchContainerRef.current.contains(e.target as Node)) {
+        setShowRecentSearches(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
   useEffect(() => {
@@ -107,14 +131,85 @@ export default function Index() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
+  const loadRecentSearches = useCallback(async () => {
+    try {
+      const u = await withRetryQuiet(() => client.auth.me(), null);
+      if (!u?.data) return;
+      const res = await withRetryQuiet(
+        () =>
+          client.entities.search_histories.query({
+            query: {},
+            sort: '-searched_at',
+            limit: 8,
+          }),
+        { data: { items: [] } } as any
+      );
+      const items = res?.data?.items || [];
+      // Deduplicate by query text (keep most recent)
+      const seen = new Set<string>();
+      const unique: { id: number; query: string }[] = [];
+      for (const item of items) {
+        const q = (item.query || '').toLowerCase().trim();
+        if (q && !seen.has(q)) {
+          seen.add(q);
+          unique.push({ id: item.id, query: item.query });
+        }
+      }
+      setRecentSearches(unique.slice(0, 6));
+    } catch {
+      // Silently fail
+    }
+  }, []);
+
+  const saveSearchQuery = async (query: string) => {
+    try {
+      const u = await withRetryQuiet(() => client.auth.me(), null);
+      if (!u?.data) return;
+      await withRetryQuiet(
+        () =>
+          client.entities.search_histories.create({
+            data: {
+              query,
+              searched_at: new Date().toISOString(),
+            },
+          }),
+        null
+      );
+    } catch {
+      // Silently fail - don't block search
+    }
+  };
+
+  const deleteSearchHistoryItem = async (id: number) => {
+    try {
+      await withRetryQuiet(
+        () => client.entities.search_histories.delete({ id: String(id) }),
+        null
+      );
+      setRecentSearches((prev) => prev.filter((s) => s.id !== id));
+    } catch {
+      // Silently fail
+    }
+  };
+
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     const q = searchQuery.trim();
     if (q) {
+      saveSearchQuery(q);
       navigate(`/products?search=${encodeURIComponent(q)}`);
       setSearchQuery('');
       setSearchOpen(false);
+      setShowRecentSearches(false);
     }
+  };
+
+  const handleRecentSearchClick = (query: string) => {
+    saveSearchQuery(query);
+    navigate(`/products?search=${encodeURIComponent(query)}`);
+    setSearchQuery('');
+    setSearchOpen(false);
+    setShowRecentSearches(false);
   };
 
   const checkAuth = async () => {
@@ -301,32 +396,74 @@ export default function Index() {
 
             {/* Search + Back to Top */}
             <div className="flex items-center gap-1 shrink-0">
-              {/* Search bar */}
-              <form
-                onSubmit={handleSearch}
-                className={`flex items-center transition-all duration-300 overflow-hidden ${
-                  searchOpen
-                    ? 'w-48 sm:w-56 bg-slate-800 border border-slate-600 rounded-full px-3'
-                    : 'w-0 sm:w-0'
-                }`}
-              >
-                <Search className="h-3.5 w-3.5 text-slate-400 shrink-0" />
-                <input
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search products..."
-                  className="bg-transparent border-none outline-none text-xs sm:text-sm text-white placeholder-slate-500 w-full px-2 py-1.5"
-                  autoFocus={searchOpen}
-                />
-                <button
-                  type="button"
-                  onClick={() => { setSearchOpen(false); setSearchQuery(''); }}
-                  className="text-slate-400 hover:text-white shrink-0"
+              {/* Search bar with recent searches */}
+              <div ref={searchContainerRef} className="relative">
+                <form
+                  onSubmit={handleSearch}
+                  className={`flex items-center transition-all duration-300 overflow-hidden ${
+                    searchOpen
+                      ? 'w-48 sm:w-56 bg-slate-800 border border-slate-600 rounded-full px-3'
+                      : 'w-0 sm:w-0'
+                  }`}
                 >
-                  <X className="h-3.5 w-3.5" />
-                </button>
-              </form>
+                  <Search className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    onFocus={() => setShowRecentSearches(true)}
+                    placeholder="Search products..."
+                    className="bg-transparent border-none outline-none text-xs sm:text-sm text-white placeholder-slate-500 w-full px-2 py-1.5"
+                    autoFocus={searchOpen}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => { setSearchOpen(false); setSearchQuery(''); setShowRecentSearches(false); }}
+                    className="text-slate-400 hover:text-white shrink-0"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                </form>
+
+                {/* Recent Searches Dropdown */}
+                {searchOpen && showRecentSearches && recentSearches.length > 0 && (
+                  <div className="absolute top-full right-0 mt-2 w-64 sm:w-72 bg-slate-800 border border-slate-700 rounded-xl shadow-2xl shadow-black/40 overflow-hidden z-50">
+                    <div className="flex items-center justify-between px-3 py-2 border-b border-slate-700/50">
+                      <span className="text-xs font-medium text-slate-400 flex items-center gap-1.5">
+                        <Clock className="h-3 w-3" />
+                        Recent Searches
+                      </span>
+                    </div>
+                    <div className="p-2 flex flex-wrap gap-1.5">
+                      {recentSearches.map((item) => (
+                        <div
+                          key={item.id}
+                          className="group flex items-center gap-1 bg-slate-700/60 hover:bg-blue-600/30 border border-slate-600/50 hover:border-blue-500/50 rounded-full pl-3 pr-1.5 py-1 cursor-pointer transition-all duration-200"
+                        >
+                          <button
+                            type="button"
+                            onClick={() => handleRecentSearchClick(item.query)}
+                            className="text-xs text-slate-300 group-hover:text-white truncate max-w-[140px]"
+                          >
+                            {item.query}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              deleteSearchHistoryItem(item.id);
+                            }}
+                            className="text-slate-500 hover:text-red-400 transition-colors p-0.5 rounded-full hover:bg-slate-600/50"
+                            aria-label={`Remove ${item.query}`}
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
 
               {/* Search icon toggle */}
               {!searchOpen && (

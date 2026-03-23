@@ -171,8 +171,31 @@ export default function Products() {
     }
   };
 
+  const saveSearchQuery = async (query: string) => {
+    try {
+      const u = await withRetryQuiet(() => client.auth.me(), null);
+      if (!u?.data) return;
+      await withRetryQuiet(
+        () =>
+          client.entities.search_histories.create({
+            data: {
+              query,
+              searched_at: new Date().toISOString(),
+            },
+          }),
+        null
+      );
+    } catch {
+      // Silently fail
+    }
+  };
+
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
+    const q = searchQuery.trim();
+    if (q) {
+      saveSearchQuery(q);
+    }
     loadProducts();
   };
 
