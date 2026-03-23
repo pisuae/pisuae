@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ArrowRight, Cpu, HardDrive, Monitor, Battery, MemoryStick, Keyboard, Zap, Shield, Truck, Laptop, Smartphone, Shirt, Sparkles, Gift, ToyBrick, UtensilsCrossed, Sofa, Watch, Home, User } from 'lucide-react';
+import { ArrowRight, Cpu, HardDrive, Monitor, Battery, MemoryStick, Keyboard, Zap, Shield, Truck, Laptop, Smartphone, Shirt, Sparkles, Gift, ToyBrick, UtensilsCrossed, Sofa, Watch, Home, User, ChevronUp, Grid3X3, Star, Tag } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { toast } from 'sonner';
@@ -56,7 +56,16 @@ export default function Index() {
   const [ratings, setRatings] = useState<Record<number, RatingInfo>>({});
   const [user, setUser] = useState<any>(null);
   const [authChecked, setAuthChecked] = useState(false);
+  const [activeSection, setActiveSection] = useState('');
+  const [showJumpNav, setShowJumpNav] = useState(false);
   const navigate = useNavigate();
+
+  const sections = [
+    { id: 'features', label: 'Features', icon: Shield },
+    { id: 'categories', label: 'Categories', icon: Grid3X3 },
+    { id: 'featured-products', label: 'Featured', icon: Star },
+    { id: 'deals', label: 'Deals', icon: Tag },
+  ];
 
   useEffect(() => {
     // Load products first, then stagger other calls to reduce simultaneous Lambda DNS hits
@@ -65,6 +74,36 @@ export default function Index() {
     const timer = setTimeout(() => loadCartCount(), 800);
     return () => clearTimeout(timer);
   }, []);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      // Show jump nav after scrolling past hero
+      setShowJumpNav(window.scrollY > 400);
+
+      // Determine active section
+      const offsets = sections.map(({ id }) => {
+        const el = document.getElementById(id);
+        if (!el) return { id, top: Infinity };
+        return { id, top: Math.abs(el.getBoundingClientRect().top - 100) };
+      });
+      const closest = offsets.reduce((a, b) => (a.top < b.top ? a : b));
+      setActiveSection(closest.id);
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  const scrollToSection = (id: string) => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  };
+
+  const scrollToTop = () => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
   const checkAuth = async () => {
     try {
@@ -226,6 +265,49 @@ export default function Index() {
         </div>
       </section>
 
+      {/* Section Jump Navigation Bar */}
+      <nav className="sticky top-16 z-40 bg-slate-900/95 backdrop-blur-md border-y border-slate-700/50 shadow-lg shadow-black/20">
+        <div className="container mx-auto px-4">
+          <div className="flex items-center justify-between h-12">
+            <div className="flex items-center gap-1 sm:gap-2 overflow-x-auto scrollbar-hide">
+              {sections.map(({ id, label, icon: Icon }) => (
+                <button
+                  key={id}
+                  onClick={() => scrollToSection(id)}
+                  className={`flex items-center gap-1.5 px-3 sm:px-4 py-1.5 rounded-full text-xs sm:text-sm font-medium whitespace-nowrap transition-all duration-200 ${
+                    activeSection === id
+                      ? 'bg-blue-600 text-white shadow-md shadow-blue-500/25'
+                      : 'text-slate-400 hover:text-white hover:bg-slate-800'
+                  }`}
+                >
+                  <Icon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                  {label}
+                </button>
+              ))}
+            </div>
+            <button
+              onClick={scrollToTop}
+              className="flex items-center gap-1 px-3 py-1.5 rounded-full text-xs sm:text-sm font-medium text-slate-400 hover:text-white hover:bg-slate-800 transition-all duration-200 shrink-0"
+            >
+              <ChevronUp className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">Back to Top</span>
+              <span className="sm:hidden">Top</span>
+            </button>
+          </div>
+        </div>
+      </nav>
+
+      {/* Floating Back to Top Button */}
+      <button
+        onClick={scrollToTop}
+        className={`fixed bottom-6 right-6 z-50 flex h-11 w-11 items-center justify-center rounded-full bg-blue-600 text-white shadow-lg shadow-blue-500/30 hover:bg-blue-500 transition-all duration-300 ${
+          showJumpNav ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0 pointer-events-none'
+        }`}
+        aria-label="Back to top"
+      >
+        <ChevronUp className="h-5 w-5" />
+      </button>
+
       {/* Sign Up / Login Banner for non-authenticated users */}
       {authChecked && !user && (
         <section className="relative overflow-hidden border-b border-blue-500/20">
@@ -267,7 +349,7 @@ export default function Index() {
       )}
 
       {/* Features Bar */}
-      <section className="border-y border-slate-800 bg-slate-900/50">
+      <section id="features" className="border-y border-slate-800 bg-slate-900/50 scroll-mt-28">
         <div className="container mx-auto px-4 py-6">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="flex items-center gap-3">
@@ -302,7 +384,7 @@ export default function Index() {
       </section>
 
       {/* Categories */}
-      <section className="container mx-auto px-4 py-16">
+      <section id="categories" className="container mx-auto px-4 py-16 scroll-mt-28">
         <div className="flex items-center justify-between mb-8">
           <h2 className="text-2xl font-bold">Shop by Category</h2>
           <Link to="/products" className="text-blue-400 hover:text-blue-300 text-sm flex items-center gap-1">
@@ -332,7 +414,7 @@ export default function Index() {
       </section>
 
       {/* Featured Products */}
-      <section className="container mx-auto px-4 py-16">
+      <section id="featured-products" className="container mx-auto px-4 py-16 scroll-mt-28">
         <div className="flex items-center justify-between mb-8">
           <h2 className="text-2xl font-bold">Featured Products</h2>
           <Link to="/products" className="text-blue-400 hover:text-blue-300 text-sm flex items-center gap-1">
@@ -359,7 +441,7 @@ export default function Index() {
       </section>
 
       {/* CTA Section */}
-      <section className="relative overflow-hidden">
+      <section id="deals" className="relative overflow-hidden scroll-mt-28">
         <div className="absolute inset-0">
           <img src={STORE_IMAGE} alt="Electronics store" className="w-full h-full object-cover opacity-20" />
           <div className="absolute inset-0 bg-gradient-to-r from-blue-900/80 to-slate-950/90" />
