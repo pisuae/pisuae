@@ -142,6 +142,27 @@ async def checkout_stripe(
         if frontend_host and not frontend_host.startswith(("http://", "https://")):
             frontend_host = f"https://{frontend_host}"
 
+        # Use frontend-provided URLs as primary, fall back to App-Host header
+        if data.success_url and data.cancel_url:
+            final_success_url = data.success_url
+            final_cancel_url = data.cancel_url
+        elif frontend_host:
+            final_success_url = f"{frontend_host}/payment-success?session_id={{CHECKOUT_SESSION_ID}}"
+            final_cancel_url = f"{frontend_host}/cart"
+        else:
+            # Last resort: use Referer or Origin header
+            origin = request.headers.get("Origin") or request.headers.get("Referer", "").rstrip("/")
+            if origin:
+                final_success_url = f"{origin}/payment-success?session_id={{CHECKOUT_SESSION_ID}}"
+                final_cancel_url = f"{origin}/cart"
+            else:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Cannot determine redirect URLs. Please provide success_url and cancel_url."
+                )
+
+        logger.info(f"Stripe checkout URLs - success: {final_success_url}, cancel: {final_cancel_url}")
+
         # Create orders for each item
         for item in data.items:
             product = await products_service.get_by_id(item.product_id)
@@ -170,9 +191,9 @@ async def checkout_stripe(
         if not order_ids:
             raise HTTPException(status_code=400, detail="No orders were created")
 
-        # Create Stripe checkout session
-        success_url = f"{frontend_host}/payment-success?session_id={{CHECKOUT_SESSION_ID}}"
-        cancel_url = f"{frontend_host}/cart"
+        # Use the determined URLs for Stripe checkout
+        success_url = final_success_url
+        cancel_url = final_cancel_url
 
         checkout_request = CheckoutSessionRequest(
             amount=round(total_amount, 2),

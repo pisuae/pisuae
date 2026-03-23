@@ -190,8 +190,16 @@ export default function Checkout() {
 
       if (res?.data?.url) {
         sessionStorage.removeItem('checkout_items');
-        client.utils.openUrl(res.data.url);
+        // Use window.location.href for reliable redirect to Stripe checkout
+        // client.utils.openUrl may not work in all environments (PWA, embedded webview)
+        try {
+          window.location.href = res.data.url;
+        } catch {
+          // Fallback: try opening in new tab
+          window.open(res.data.url, '_blank');
+        }
       } else {
+        console.error('Stripe checkout response:', res);
         toast.error('Failed to create payment session. Please try again.');
       }
     } catch (err) {
