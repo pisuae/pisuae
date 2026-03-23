@@ -15,6 +15,7 @@ import VendorAnalytics from './pages/VendorAnalytics';
 import Profile from './pages/Profile';
 import AuthCallback from './pages/AuthCallback';
 import AuthError from './pages/AuthError';
+import PWAGuide from './pages/PWAGuide';
 import ChatBot from './components/ChatBot';
 
 const queryClient = new QueryClient();
@@ -38,6 +39,7 @@ const App = () => (
           <Route path="/profile" element={<Profile />} />
           <Route path="/auth/callback" element={<AuthCallback />} />
           <Route path="/auth/error" element={<AuthError />} />
+          <Route path="/pwa-guide" element={<PWAGuide />} />
         </Routes>
         <ChatBot />
       </BrowserRouter>

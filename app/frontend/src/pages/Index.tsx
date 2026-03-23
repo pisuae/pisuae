@@ -725,9 +725,15 @@ export default function Index() {
               <Cpu className="h-5 w-5 text-blue-400" />
               <span className="font-bold text-white">PIS UAE</span>
             </div>
-            <p className="text-sm text-slate-400">
-              © 2026 PIS UAE Marketplace. All rights reserved.
-            </p>
+            <div className="flex items-center gap-4">
+              <Link to="/pwa-guide" className="text-sm text-blue-400 hover:text-blue-300 flex items-center gap-1.5 transition-colors">
+                <Smartphone className="h-3.5 w-3.5" />
+                Install App
+              </Link>
+              <p className="text-sm text-slate-400">
+                © 2026 PIS UAE Marketplace. All rights reserved.
+              </p>
+            </div>
           </div>
         </div>
       </footer>
