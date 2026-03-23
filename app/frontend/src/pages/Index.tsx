@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ArrowRight, Cpu, HardDrive, Monitor, Battery, MemoryStick, Keyboard, Zap, Shield, Truck, Laptop, Smartphone, Shirt, Sparkles, Gift, ToyBrick, UtensilsCrossed, Sofa, Watch, Home, User, ChevronUp, Grid3X3, Star, Tag, Search, X, Clock, Trash2 } from 'lucide-react';
+import { ArrowRight, Cpu, HardDrive, Monitor, Battery, MemoryStick, Keyboard, Zap, Shield, Truck, Laptop, Smartphone, Shirt, Sparkles, Gift, ToyBrick, UtensilsCrossed, Sofa, Watch, Home, User, ChevronUp, Grid3X3, Star, Tag, Search, X, Clock, Trash2, TrendingUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { toast } from 'sonner';
@@ -61,6 +61,7 @@ export default function Index() {
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [recentSearches, setRecentSearches] = useState<{ id: number; query: string }[]>([]);
+  const [trendingSearches, setTrendingSearches] = useState<{ query: string; search_count: number }[]>([]);
   const [showRecentSearches, setShowRecentSearches] = useState(false);
   const searchContainerRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
@@ -151,15 +152,34 @@ export default function Index() {
     }
   }, []);
 
-  // Load recent searches when search bar opens
+  const loadTrendingSearches = useCallback(async () => {
+    try {
+      const res = await withRetryQuiet(
+        () =>
+          client.apiCall.invoke({
+            url: '/api/v1/trending-searches',
+            method: 'GET',
+            data: { limit: 8 },
+          }),
+        { data: { items: [] } } as any
+      );
+      const items = res?.data?.items || [];
+      setTrendingSearches(items);
+    } catch {
+      // Silently fail
+    }
+  }, []);
+
+  // Load recent searches and trending searches when search bar opens
   useEffect(() => {
     if (searchOpen) {
       setShowRecentSearches(true);
       loadRecentSearches();
+      loadTrendingSearches();
     } else {
       setShowRecentSearches(false);
     }
-  }, [searchOpen, loadRecentSearches]);
+  }, [searchOpen, loadRecentSearches, loadTrendingSearches]);
 
   const saveSearchQuery = async (query: string) => {
     try {
@@ -425,42 +445,79 @@ export default function Index() {
                   </button>
                 </form>
 
-                {/* Recent Searches Dropdown */}
-                {searchOpen && showRecentSearches && recentSearches.length > 0 && (
-                  <div className="absolute top-full right-0 mt-2 w-64 sm:w-72 bg-slate-800 border border-slate-700 rounded-xl shadow-2xl shadow-black/40 overflow-hidden z-50">
-                    <div className="flex items-center justify-between px-3 py-2 border-b border-slate-700/50">
-                      <span className="text-xs font-medium text-slate-400 flex items-center gap-1.5">
-                        <Clock className="h-3 w-3" />
-                        Recent Searches
-                      </span>
-                    </div>
-                    <div className="p-2 flex flex-wrap gap-1.5">
-                      {recentSearches.map((item) => (
-                        <div
-                          key={item.id}
-                          className="group flex items-center gap-1 bg-slate-700/60 hover:bg-blue-600/30 border border-slate-600/50 hover:border-blue-500/50 rounded-full pl-3 pr-1.5 py-1 cursor-pointer transition-all duration-200"
-                        >
-                          <button
-                            type="button"
-                            onClick={() => handleRecentSearchClick(item.query)}
-                            className="text-xs text-slate-300 group-hover:text-white truncate max-w-[140px]"
-                          >
-                            {item.query}
-                          </button>
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              deleteSearchHistoryItem(item.id);
-                            }}
-                            className="text-slate-500 hover:text-red-400 transition-colors p-0.5 rounded-full hover:bg-slate-600/50"
-                            aria-label={`Remove ${item.query}`}
-                          >
-                            <X className="h-3 w-3" />
-                          </button>
+                {/* Search Dropdown: Recent + Trending */}
+                {searchOpen && showRecentSearches && (recentSearches.length > 0 || trendingSearches.length > 0) && (
+                  <div className="absolute top-full right-0 mt-2 w-72 sm:w-80 bg-slate-800 border border-slate-700 rounded-xl shadow-2xl shadow-black/40 overflow-hidden z-50 max-h-[360px] overflow-y-auto">
+                    {/* Recent Searches */}
+                    {recentSearches.length > 0 && (
+                      <>
+                        <div className="flex items-center justify-between px-3 py-2 border-b border-slate-700/50">
+                          <span className="text-xs font-medium text-slate-400 flex items-center gap-1.5">
+                            <Clock className="h-3 w-3" />
+                            Recent Searches
+                          </span>
                         </div>
-                      ))}
-                    </div>
+                        <div className="p-2 flex flex-wrap gap-1.5">
+                          {recentSearches.map((item) => (
+                            <div
+                              key={item.id}
+                              className="group flex items-center gap-1 bg-slate-700/60 hover:bg-blue-600/30 border border-slate-600/50 hover:border-blue-500/50 rounded-full pl-3 pr-1.5 py-1 cursor-pointer transition-all duration-200"
+                            >
+                              <button
+                                type="button"
+                                onClick={() => handleRecentSearchClick(item.query)}
+                                className="text-xs text-slate-300 group-hover:text-white truncate max-w-[140px]"
+                              >
+                                {item.query}
+                              </button>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  deleteSearchHistoryItem(item.id);
+                                }}
+                                className="text-slate-500 hover:text-red-400 transition-colors p-0.5 rounded-full hover:bg-slate-600/50"
+                                aria-label={`Remove ${item.query}`}
+                              >
+                                <X className="h-3 w-3" />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      </>
+                    )}
+
+                    {/* Trending Searches */}
+                    {trendingSearches.length > 0 && (
+                      <>
+                        <div className="flex items-center justify-between px-3 py-2 border-b border-slate-700/50 border-t border-t-slate-700/30">
+                          <span className="text-xs font-medium text-orange-400 flex items-center gap-1.5">
+                            <TrendingUp className="h-3 w-3" />
+                            Trending Searches
+                          </span>
+                        </div>
+                        <div className="p-2 flex flex-wrap gap-1.5">
+                          {trendingSearches.map((item, idx) => (
+                            <button
+                              key={`trending-${idx}`}
+                              type="button"
+                              onClick={() => handleRecentSearchClick(item.query)}
+                              className="flex items-center gap-1.5 bg-orange-500/10 hover:bg-orange-500/25 border border-orange-500/20 hover:border-orange-500/40 rounded-full px-3 py-1 cursor-pointer transition-all duration-200"
+                            >
+                              <span className="text-[10px] font-bold text-orange-400/70 min-w-[14px]">
+                                {idx + 1}
+                              </span>
+                              <span className="text-xs text-slate-300 hover:text-white truncate max-w-[140px]">
+                                {item.query}
+                              </span>
+                              <span className="text-[10px] text-slate-500">
+                                {item.search_count}
+                              </span>
+                            </button>
+                          ))}
+                        </div>
+                      </>
+                    )}
                   </div>
                 )}
               </div>
