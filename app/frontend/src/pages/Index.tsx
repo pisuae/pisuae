@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ArrowRight, Cpu, HardDrive, Monitor, Battery, MemoryStick, Keyboard, Zap, Shield, Truck } from 'lucide-react';
+import { ArrowRight, Cpu, HardDrive, Monitor, Battery, MemoryStick, Keyboard, Zap, Shield, Truck, Laptop, Smartphone, Shirt, Sparkles, Gift, ToyBrick, UtensilsCrossed, Sofa, Watch, Home } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { toast } from 'sonner';
 import Header from '@/components/Header';
 import ProductCard from '@/components/ProductCard';
 import { client } from '@/lib/api';
+import { withRetry, withRetryQuiet } from '@/lib/retry';
 
 const HERO_IMAGE = 'https://mgx-backend-cdn.metadl.com/generate/images/1040407/2026-03-18/8db7c9fe-7e9e-4248-a343-e5e92c3ed9e4.png';
 const REPAIR_IMAGE = 'https://mgx-backend-cdn.metadl.com/generate/images/1040407/2026-03-18/b4f787f3-521f-433a-adbb-011f6bfd6924.png';
@@ -25,6 +26,16 @@ interface Product {
 }
 
 const categories = [
+  { name: 'Clothing', icon: Shirt, color: 'from-fuchsia-500 to-fuchsia-700' },
+  { name: 'Makeup', icon: Sparkles, color: 'from-pink-400 to-pink-600' },
+  { name: 'Combo', icon: Gift, color: 'from-violet-500 to-violet-700' },
+  { name: 'Toys', icon: ToyBrick, color: 'from-orange-500 to-orange-700' },
+  { name: 'Kitchen', icon: UtensilsCrossed, color: 'from-teal-500 to-teal-700' },
+  { name: 'Furniture', icon: Sofa, color: 'from-stone-500 to-stone-700' },
+  { name: 'Smartwatch', icon: Watch, color: 'from-sky-500 to-sky-700' },
+  { name: 'Smart Home', icon: Home, color: 'from-green-500 to-green-700' },
+  { name: 'Phones', icon: Smartphone, color: 'from-rose-500 to-rose-700' },
+  { name: 'Laptops', icon: Laptop, color: 'from-indigo-500 to-indigo-700' },
   { name: 'Motherboards', icon: Cpu, color: 'from-blue-500 to-blue-700' },
   { name: 'Storage', icon: HardDrive, color: 'from-emerald-500 to-emerald-700' },
   { name: 'Displays', icon: Monitor, color: 'from-purple-500 to-purple-700' },
@@ -33,25 +44,63 @@ const categories = [
   { name: 'Keyboards', icon: Keyboard, color: 'from-cyan-500 to-cyan-700' },
 ];
 
+interface RatingInfo {
+  average_rating: number;
+  review_count: number;
+}
+
 export default function Index() {
   const [featuredProducts, setFeaturedProducts] = useState<Product[]>([]);
   const [cartCount, setCartCount] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [ratings, setRatings] = useState<Record<number, RatingInfo>>({});
   const navigate = useNavigate();
 
   useEffect(() => {
+    // Load products first, then stagger cart count to reduce simultaneous Lambda DNS hits
     loadFeaturedProducts();
-    loadCartCount();
+    const timer = setTimeout(() => loadCartCount(), 500);
+    return () => clearTimeout(timer);
   }, []);
+
+  const loadBulkRatings = async (productIds: number[]) => {
+    if (productIds.length === 0) return;
+    // Stagger ratings call to avoid simultaneous Lambda DNS resolution issues
+    await new Promise((r) => setTimeout(r, 800));
+    // Use quiet retry - ratings are non-critical UI enhancement
+    const res = await withRetryQuiet(
+      () =>
+        client.apiCall.invoke({
+          url: '/api/v1/reviews/ratings/bulk',
+          method: 'GET',
+          data: { product_ids: productIds.join(',') },
+        }),
+      { data: { ratings: [] } } as any
+    );
+    const items = res?.data?.ratings || [];
+    const map: Record<number, RatingInfo> = {};
+    for (const item of items) {
+      map[item.product_id] = {
+        average_rating: item.average_rating,
+        review_count: item.review_count,
+      };
+    }
+    setRatings(map);
+  };
 
   const loadFeaturedProducts = async () => {
     try {
-      const res = await client.entities.products.query({
-        query: { status: 'active' },
-        limit: 8,
-        sort: '-created_at',
-      });
-      setFeaturedProducts(res?.data?.items || []);
+      const res = await withRetry(() =>
+        client.entities.products.query({
+          query: { status: 'active' },
+          limit: 8,
+          sort: '-created_at',
+        })
+      );
+      const items = res?.data?.items || [];
+      setFeaturedProducts(items);
+      const ids = items.map((p: Product) => p.id);
+      loadBulkRatings(ids);
     } catch (err) {
       console.error('Failed to load products:', err);
     } finally {
@@ -61,9 +110,9 @@ export default function Index() {
 
   const loadCartCount = async () => {
     try {
-      const user = await client.auth.me();
+      const user = await withRetry(() => client.auth.me());
       if (user?.data) {
-        const res = await client.entities.cart_items.query({ query: {} });
+        const res = await withRetry(() => client.entities.cart_items.query({ query: {} }));
         const items = res?.data?.items || [];
         setCartCount(items.reduce((sum: number, item: any) => sum + (item.quantity || 1), 0));
       }
@@ -74,30 +123,36 @@ export default function Index() {
 
   const handleAddToCart = async (productId: number) => {
     try {
-      const user = await client.auth.me();
+      const user = await withRetry(() => client.auth.me());
       if (!user?.data) {
         toast.error('Please sign in to add items to cart');
         await client.auth.toLogin();
         return;
       }
       // Check if already in cart
-      const cartRes = await client.entities.cart_items.query({ query: { product_id: productId } });
+      const cartRes = await withRetry(() =>
+        client.entities.cart_items.query({ query: { product_id: productId } })
+      );
       const existing = cartRes?.data?.items?.[0];
       if (existing) {
-        await client.entities.cart_items.update({
-          id: existing.id,
-          data: { quantity: (existing.quantity || 1) + 1 },
-        });
+        await withRetry(() =>
+          client.entities.cart_items.update({
+            id: existing.id,
+            data: { quantity: (existing.quantity || 1) + 1 },
+          })
+        );
       } else {
-        await client.entities.cart_items.create({
-          data: { product_id: productId, quantity: 1 },
-        });
+        await withRetry(() =>
+          client.entities.cart_items.create({
+            data: { product_id: productId, quantity: 1 },
+          })
+        );
       }
       toast.success('Added to cart!');
       loadCartCount();
     } catch (err) {
       console.error('Failed to add to cart:', err);
-      toast.error('Failed to add to cart');
+      toast.error('Failed to add to cart. Please try again.');
     }
   };
 
@@ -116,17 +171,17 @@ export default function Index() {
           <div className="max-w-2xl space-y-6 mt-[0px] mr-[0px] mb-[0px] ml-[0px] pt-[0px] pr-[0px] pb-[0px] pl-[0px] rounded-none text-[16px] font-normal text-[#FFFFFF] bg-[#00000000] opacity-100">
             <div className="inline-flex items-center gap-2 px-4 py-2 border border-blue-500/20 mt-[0px] mr-[0px] mb-[0px] ml-[0px] pt-[8px] pr-[16px] pb-[8px] pl-[16px] rounded-full text-[14px] font-normal text-[#60A5FA] bg-[#3B82F61A] opacity-100">
               <Zap className="h-4 w-4" />
-              Premium Laptop Parts & Electronics
+              Your One-Stop Online Marketplace
             </div>
             <h1 className="md:text-6xl mt-[24px] mr-[0px] mb-[0px] ml-[0px] pt-[0px] pr-[0px] pb-[0px] pl-[0px] rounded-none text-[60px] font-bold text-[#FFFFFF] bg-[#00000000] opacity-100">
-              Find the Perfect{' '}
+              Shop{' '}
               <span className="bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent">
-                Parts
+                Everything
               </span>{' '}
-              for Your Tech
+              You Need
             </h1>
             <p className="text-lg text-slate-300 max-w-lg">
-              Browse thousands of laptop components, electronics, and accessories. New, refurbished, and used — all quality guaranteed.
+              From fashion & beauty to smartwatches, smart home devices, electronics, furniture, kitchen essentials, and kids toys — discover quality products at the best prices.
             </p>
             <div className="flex flex-wrap gap-3">
               <Button
@@ -193,11 +248,11 @@ export default function Index() {
             View All <ArrowRight className="h-4 w-4" />
           </Link>
         </div>
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-7 gap-3">
           {categories.map((cat) => (
             <Link
               key={cat.name}
-              to={`/products?category=${cat.name.toLowerCase()}`}
+              to={`/products?category=${cat.name.toLowerCase().replace(/\s+/g, '-')}`}
               className="group"
             >
               <Card className="bg-slate-800/50 border-slate-700/50 hover:border-blue-500/50 transition-all duration-300 hover:-translate-y-1">
@@ -232,7 +287,7 @@ export default function Index() {
         ) : featuredProducts.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
             {featuredProducts.map((product) => (
-              <ProductCard key={product.id} product={product} onAddToCart={handleAddToCart} />
+              <ProductCard key={product.id} product={product} onAddToCart={handleAddToCart} rating={ratings[product.id]} />
             ))}
           </div>
         ) : (

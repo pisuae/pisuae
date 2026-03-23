@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { ShoppingCart, Tag } from 'lucide-react';
+import { ShoppingCart, Tag, Star } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
@@ -21,6 +21,7 @@ interface Product {
 interface ProductCardProps {
   product: Product;
   onAddToCart?: (productId: number) => void;
+  rating?: { average_rating: number; review_count: number };
 }
 
 const conditionColors: Record<string, string> = {
@@ -32,7 +33,30 @@ const conditionColors: Record<string, string> = {
 
 const defaultImage = 'https://mgx-backend-cdn.metadl.com/generate/images/1040407/2026-03-18/c1384985-4f46-41a1-af84-fd758bd4107a.png';
 
-export default function ProductCard({ product, onAddToCart }: ProductCardProps) {
+function StarRating({ rating, count }: { rating: number; count: number }) {
+  if (count === 0) return null;
+  return (
+    <div className="flex items-center gap-1.5">
+      <div className="flex items-center gap-0.5">
+        {[1, 2, 3, 4, 5].map((star) => (
+          <Star
+            key={star}
+            className={`h-3 w-3 ${
+              star <= Math.round(rating)
+                ? 'text-amber-400 fill-amber-400'
+                : 'text-slate-600'
+            }`}
+          />
+        ))}
+      </div>
+      <span className="text-xs text-slate-400">
+        {rating.toFixed(1)} ({count})
+      </span>
+    </div>
+  );
+}
+
+export default function ProductCard({ product, onAddToCart, rating }: ProductCardProps) {
   const [resolvedSrc, setResolvedSrc] = useState<string>(defaultImage);
   const isOutOfStock = product.stock !== undefined && product.stock <= 0;
 
@@ -76,10 +100,13 @@ export default function ProductCard({ product, onAddToCart }: ProductCardProps) 
             {product.title}
           </h3>
         </Link>
-        <div className="flex items-center gap-2">
-          <Tag className="h-3 w-3 text-slate-400" />
-          <span className="text-xs text-slate-400 capitalize">{product.category}</span>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Tag className="h-3 w-3 text-slate-400" />
+            <span className="text-xs text-slate-400 capitalize">{product.category}</span>
+          </div>
         </div>
+        {rating && <StarRating rating={rating.average_rating} count={rating.review_count} />}
         <div className="flex items-center justify-between pt-1">
           <span className="text-lg font-bold text-emerald-400">
             ${product.price.toFixed(2)}

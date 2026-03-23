@@ -12,6 +12,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { client } from '@/lib/api';
+import { withRetry, withRetryQuiet } from '@/lib/retry';
 
 interface HeaderProps {
   cartCount?: number;
@@ -25,21 +26,35 @@ export default function Header({ cartCount = 0, onSearch }: HeaderProps) {
   const navigate = useNavigate();
 
   useEffect(() => {
+    let cancelled = false;
+
     const checkAuth = async () => {
       try {
-        const res = await client.auth.me();
+        const res = await withRetry(() => client.auth.me());
+        if (cancelled) return;
         if (res?.data) {
           setUser(res.data);
-          // Check if user is a vendor
-          const vendorRes = await client.entities.vendors.query({ query: {} });
+          // Stagger the vendor check to avoid simultaneous Lambda cold-start DNS issues
+          await new Promise((r) => setTimeout(r, 300));
+          if (cancelled) return;
+          // Use quiet retry for vendor check - it's non-critical UI state
+          const vendorRes = await withRetryQuiet(
+            () => client.entities.vendors.query({ query: {} }),
+            { data: { items: [] } } as any
+          );
+          if (cancelled) return;
           const vendors = vendorRes?.data?.items || [];
           setIsVendor(vendors.length > 0 && vendors[0].status === 'active');
         }
       } catch {
-        setUser(null);
+        if (!cancelled) setUser(null);
       }
     };
     checkAuth();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const handleLogin = async () => {
@@ -134,6 +149,10 @@ export default function Header({ cartCount = 0, onSearch }: HeaderProps) {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="bg-slate-800 border-slate-700 text-white">
+                <DropdownMenuItem onClick={() => navigate('/profile')} className="hover:bg-slate-700 cursor-pointer">
+                  <User className="h-4 w-4 mr-2" />
+                  My Profile
+                </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => navigate('/orders')} className="hover:bg-slate-700 cursor-pointer">
                   <Package className="h-4 w-4 mr-2" />
                   My Orders
