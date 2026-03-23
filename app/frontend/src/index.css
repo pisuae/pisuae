@@ -99,3 +99,19 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Hide scrollbar on mobile while keeping scroll functionality */
+@media (max-width: 768px) {
+  html,
+  body,
+  * {
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* IE/Edge */
+  }
+
+  html::-webkit-scrollbar,
+  body::-webkit-scrollbar,
+  *::-webkit-scrollbar {
+    display: none; /* Chrome, Safari, Opera */
+  }
+}
