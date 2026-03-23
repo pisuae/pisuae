@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ArrowRight, Cpu, HardDrive, Monitor, Battery, MemoryStick, Keyboard, Zap, Shield, Truck, Laptop, Smartphone, Shirt, Sparkles, Gift, ToyBrick, UtensilsCrossed, Sofa, Watch, Home, User, ChevronUp, Grid3X3, Star, Tag } from 'lucide-react';
+import { ArrowRight, Cpu, HardDrive, Monitor, Battery, MemoryStick, Keyboard, Zap, Shield, Truck, Laptop, Smartphone, Shirt, Sparkles, Gift, ToyBrick, UtensilsCrossed, Sofa, Watch, Home, User, ChevronUp, Grid3X3, Star, Tag, Search, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { toast } from 'sonner';
@@ -58,6 +58,8 @@ export default function Index() {
   const [authChecked, setAuthChecked] = useState(false);
   const [activeSection, setActiveSection] = useState('');
   const [showJumpNav, setShowJumpNav] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
   const navigate = useNavigate();
 
   const sections = [
@@ -103,6 +105,16 @@ export default function Index() {
 
   const scrollToTop = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    const q = searchQuery.trim();
+    if (q) {
+      navigate(`/products?search=${encodeURIComponent(q)}`);
+      setSearchQuery('');
+      setSearchOpen(false);
+    }
   };
 
   const checkAuth = async () => {
@@ -268,8 +280,9 @@ export default function Index() {
       {/* Section Jump Navigation Bar */}
       <nav className="sticky top-16 z-40 bg-slate-900/95 backdrop-blur-md border-y border-slate-700/50 shadow-lg shadow-black/20">
         <div className="container mx-auto px-4">
-          <div className="flex items-center justify-between h-12">
-            <div className="flex items-center gap-1 sm:gap-2 overflow-x-auto scrollbar-hide">
+          <div className="flex items-center justify-between h-12 gap-2">
+            {/* Section jump links - hidden when search is open on mobile */}
+            <div className={`flex items-center gap-1 sm:gap-2 overflow-x-auto scrollbar-hide ${searchOpen ? 'hidden sm:flex' : 'flex'}`}>
               {sections.map(({ id, label, icon: Icon }) => (
                 <button
                   key={id}
@@ -285,14 +298,60 @@ export default function Index() {
                 </button>
               ))}
             </div>
-            <button
-              onClick={scrollToTop}
-              className="flex items-center gap-1 px-3 py-1.5 rounded-full text-xs sm:text-sm font-medium text-slate-400 hover:text-white hover:bg-slate-800 transition-all duration-200 shrink-0"
-            >
-              <ChevronUp className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">Back to Top</span>
-              <span className="sm:hidden">Top</span>
-            </button>
+
+            {/* Search + Back to Top */}
+            <div className="flex items-center gap-1 shrink-0">
+              {/* Search bar */}
+              <form
+                onSubmit={handleSearch}
+                className={`flex items-center transition-all duration-300 overflow-hidden ${
+                  searchOpen
+                    ? 'w-48 sm:w-56 bg-slate-800 border border-slate-600 rounded-full px-3'
+                    : 'w-0 sm:w-0'
+                }`}
+              >
+                <Search className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search products..."
+                  className="bg-transparent border-none outline-none text-xs sm:text-sm text-white placeholder-slate-500 w-full px-2 py-1.5"
+                  autoFocus={searchOpen}
+                />
+                <button
+                  type="button"
+                  onClick={() => { setSearchOpen(false); setSearchQuery(''); }}
+                  className="text-slate-400 hover:text-white shrink-0"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              </form>
+
+              {/* Search icon toggle */}
+              {!searchOpen && (
+                <button
+                  onClick={() => setSearchOpen(true)}
+                  className="flex items-center gap-1 px-2.5 py-1.5 rounded-full text-xs sm:text-sm font-medium text-slate-400 hover:text-white hover:bg-slate-800 transition-all duration-200"
+                  aria-label="Search products"
+                >
+                  <Search className="h-4 w-4" />
+                  <span className="hidden sm:inline">Search</span>
+                </button>
+              )}
+
+              {/* Divider */}
+              <div className="h-5 w-px bg-slate-700 mx-0.5" />
+
+              {/* Back to top */}
+              <button
+                onClick={scrollToTop}
+                className="flex items-center gap-1 px-2.5 py-1.5 rounded-full text-xs sm:text-sm font-medium text-slate-400 hover:text-white hover:bg-slate-800 transition-all duration-200 shrink-0"
+              >
+                <ChevronUp className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">Top</span>
+              </button>
+            </div>
           </div>
         </div>
       </nav>
