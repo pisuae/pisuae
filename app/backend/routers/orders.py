@@ -27,6 +27,10 @@ class OrdersData(BaseModel):
     quantity: int
     total_price: float
     status: str
+    payment_method: str = None
+    stripe_session_id: str = None
+    shipping_address: str = None
+    phone_number: str = None
     created_at: Optional[datetime] = None
 
 
@@ -37,6 +41,10 @@ class OrdersUpdateData(BaseModel):
     quantity: Optional[int] = None
     total_price: Optional[float] = None
     status: Optional[str] = None
+    payment_method: Optional[str] = None
+    stripe_session_id: Optional[str] = None
+    shipping_address: Optional[str] = None
+    phone_number: Optional[str] = None
     created_at: Optional[datetime] = None
 
 
@@ -49,6 +57,10 @@ class OrdersResponse(BaseModel):
     quantity: int
     total_price: float
     status: str
+    payment_method: Optional[str] = None
+    stripe_session_id: Optional[str] = None
+    shipping_address: Optional[str] = None
+    phone_number: Optional[str] = None
     created_at: Optional[datetime] = None
 
     class Config:

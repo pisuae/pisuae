@@ -13,4 +13,8 @@ class Orders(Base):
     quantity = Column(Integer, nullable=False)
     total_price = Column(Float, nullable=False)
     status = Column(String, nullable=False)
+    payment_method = Column(String, nullable=True)
+    stripe_session_id = Column(String, nullable=True)
+    shipping_address = Column(String, nullable=True)
+    phone_number = Column(String, nullable=True)
     created_at = Column(DateTime(timezone=True), nullable=True)

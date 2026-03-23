@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Package, Clock, CheckCircle, XCircle, ArrowLeft } from 'lucide-react';
+import { Package, Clock, CheckCircle, XCircle, ArrowLeft, Ban, CreditCard, Banknote } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import Header from '@/components/Header';
 import { client } from '@/lib/api';
 import { withRetry } from '@/lib/retry';
+import { toast } from 'sonner';
 
 interface Order {
   id: number | string;
@@ -14,6 +15,9 @@ interface Order {
   quantity: number;
   total_price: number;
   status: string;
+  payment_method?: string;
+  shipping_address?: string;
+  phone_number?: string;
   created_at?: string;
 }
 
@@ -32,7 +36,11 @@ interface OrderWithProduct extends Order {
 
 const statusConfig: Record<string, { icon: any; color: string; bg: string }> = {
   pending: { icon: Clock, color: 'text-amber-400', bg: 'bg-amber-500/20 border-amber-500/30' },
+  confirmed: { icon: Package, color: 'text-blue-400', bg: 'bg-blue-500/20 border-blue-500/30' },
+  paid: { icon: CheckCircle, color: 'text-emerald-400', bg: 'bg-emerald-500/20 border-emerald-500/30' },
   processing: { icon: Package, color: 'text-blue-400', bg: 'bg-blue-500/20 border-blue-500/30' },
+  shipped: { icon: Package, color: 'text-purple-400', bg: 'bg-purple-500/20 border-purple-500/30' },
+  delivered: { icon: CheckCircle, color: 'text-emerald-400', bg: 'bg-emerald-500/20 border-emerald-500/30' },
   completed: { icon: CheckCircle, color: 'text-emerald-400', bg: 'bg-emerald-500/20 border-emerald-500/30' },
   cancelled: { icon: XCircle, color: 'text-red-400', bg: 'bg-red-500/20 border-red-500/30' },
 };
@@ -45,6 +53,7 @@ export default function Orders() {
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<any>(null);
   const [cartCount, setCartCount] = useState(0);
+  const [cancellingId, setCancellingId] = useState<number | string | null>(null);
 
   useEffect(() => {
     checkAuthAndLoad();
@@ -71,6 +80,7 @@ export default function Orders() {
         client.entities.orders.query({
           query: {},
           sort: '-created_at',
+          limit: 100,
         })
       );
       const items: Order[] = res?.data?.items || [];
@@ -101,6 +111,31 @@ export default function Orders() {
     } catch {
       // ignore
     }
+  };
+
+  const cancelOrder = async (orderId: number | string) => {
+    setCancellingId(orderId);
+    try {
+      await withRetry(() =>
+        client.entities.orders.update({
+          id: String(orderId),
+          data: { status: 'cancelled' },
+        })
+      );
+      setOrders((prev) =>
+        prev.map((o) => (o.id === orderId ? { ...o, status: 'cancelled' } : o))
+      );
+      toast.success('Order cancelled successfully');
+    } catch (err) {
+      console.error('Failed to cancel order:', err);
+      toast.error('Failed to cancel order. Please try again.');
+    } finally {
+      setCancellingId(null);
+    }
+  };
+
+  const canCancel = (status: string) => {
+    return ['pending', 'confirmed', 'paid'].includes(status);
   };
 
   const formatDate = (dateStr?: string) => {
@@ -176,6 +211,7 @@ export default function Orders() {
             {orders.map((order) => {
               const status = statusConfig[order.status] || statusConfig.pending;
               const StatusIcon = status.icon;
+              const isCancelling = cancellingId === order.id;
               return (
                 <Card key={order.id} className="bg-slate-800/80 border-slate-700/50">
                   <CardContent className="p-4">
@@ -192,20 +228,36 @@ export default function Orders() {
                       </Link>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-start justify-between gap-4">
-                          <div>
+                          <div className="min-w-0">
                             <Link to={`/products/${order.product_id}`}>
-                              <h3 className="font-semibold text-white hover:text-blue-400 transition-colors">
+                              <h3 className="font-semibold text-white hover:text-blue-400 transition-colors truncate">
                                 {order.product?.title || 'Unknown Product'}
                               </h3>
                             </Link>
                             <p className="text-sm text-slate-400 mt-1">
                               Qty: {order.quantity} · Order #{String(order.id).slice(0, 8)}
                             </p>
-                            <p className="text-xs text-slate-500 mt-1">
-                              {formatDate(order.created_at)}
-                            </p>
+                            <div className="flex items-center gap-2 mt-1">
+                              <p className="text-xs text-slate-500">
+                                {formatDate(order.created_at)}
+                              </p>
+                              {order.payment_method && (
+                                <Badge variant="outline" className="text-xs border-slate-600 text-slate-400 py-0">
+                                  {order.payment_method === 'cod' ? (
+                                    <><Banknote className="h-3 w-3 mr-1" />COD</>
+                                  ) : (
+                                    <><CreditCard className="h-3 w-3 mr-1" />Stripe</>
+                                  )}
+                                </Badge>
+                              )}
+                            </div>
+                            {order.shipping_address && (
+                              <p className="text-xs text-slate-500 mt-1 truncate">
+                                📍 {order.shipping_address}
+                              </p>
+                            )}
                           </div>
-                          <div className="text-right">
+                          <div className="text-right shrink-0">
                             <p className="text-lg font-bold text-emerald-400">
                               ${order.total_price.toFixed(2)}
                             </p>
@@ -215,6 +267,27 @@ export default function Orders() {
                             </Badge>
                           </div>
                         </div>
+                        {/* Cancel button */}
+                        {canCancel(order.status) && (
+                          <div className="mt-3 pt-3 border-t border-slate-700/50">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => cancelOrder(order.id)}
+                              disabled={isCancelling}
+                              className="border-red-500/30 text-red-400 hover:bg-red-500/10 hover:text-red-300 hover:border-red-500/50"
+                            >
+                              {isCancelling ? (
+                                'Cancelling...'
+                              ) : (
+                                <>
+                                  <Ban className="h-3.5 w-3.5 mr-1" />
+                                  Cancel Order
+                                </>
+                              )}
+                            </Button>
+                          </div>
+                        )}
                       </div>
                     </div>
                   </CardContent>

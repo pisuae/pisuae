@@ -8,7 +8,7 @@
         },
         "user_id": {
             "type": "string",
-            "description": "Buyer user ID"
+            "description": "User ID"
         },
         "product_id": {
             "type": "integer",
@@ -16,7 +16,7 @@
         },
         "seller_id": {
             "type": "string",
-            "description": "Seller user ID"
+            "description": "Seller ID"
         },
         "quantity": {
             "type": "integer",
@@ -24,11 +24,27 @@
         },
         "total_price": {
             "type": "number",
-            "description": "Total order price"
+            "description": "Total price"
         },
         "status": {
             "type": "string",
-            "description": "Order status: pending, completed, cancelled"
+            "description": "Order status: pending, paid, shipped, delivered, cancelled"
+        },
+        "payment_method": {
+            "type": "string",
+            "description": "Payment method: cod or stripe"
+        },
+        "stripe_session_id": {
+            "type": "string",
+            "description": "Stripe checkout session ID"
+        },
+        "shipping_address": {
+            "type": "string",
+            "description": "Shipping address for delivery"
+        },
+        "phone_number": {
+            "type": "string",
+            "description": "Contact phone number"
         },
         "created_at": {
             "type": "string",
