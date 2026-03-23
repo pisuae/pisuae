@@ -3,6 +3,8 @@ import React, {
   useContext,
   useState,
   useEffect,
+  useCallback,
+  useRef,
   ReactNode,
 } from 'react';
 import { authApi } from '../lib/auth';
@@ -39,24 +41,73 @@ interface AuthProviderProps {
   children: ReactNode;
 }
 
+// Auto-retry delay for background auth checks (30 seconds)
+const AUTO_RETRY_DELAY = 30000;
+
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const retryTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const mountedRef = useRef(true);
 
-  const checkAuthStatus = async () => {
+  const checkAuthStatus = useCallback(async (isAutoRetry = false) => {
     try {
-      setLoading(true);
+      if (!isAutoRetry) {
+        setLoading(true);
+      }
       setError(null);
       const userData = await authApi.getCurrentUser();
-      setUser(userData);
+      if (mountedRef.current) {
+        setUser(userData);
+        // Clear any pending retry on success
+        if (retryTimeoutRef.current) {
+          clearTimeout(retryTimeoutRef.current);
+          retryTimeoutRef.current = null;
+        }
+      }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred');
-      setUser(null);
+      if (mountedRef.current) {
+        const errorMessage =
+          err instanceof Error ? err.message : 'An error occurred';
+
+        // Check if it's a network/DNS error
+        const isNetworkError =
+          errorMessage.includes('dns') ||
+          errorMessage.includes('DNS') ||
+          errorMessage.includes('Network Error') ||
+          errorMessage.includes('timeout') ||
+          errorMessage.includes('ECONNREFUSED') ||
+          errorMessage.includes('Failed to fetch') ||
+          errorMessage.includes('balancer resolve');
+
+        if (isNetworkError) {
+          // For network errors, set user to null but show a friendlier message
+          setError(
+            'Unable to connect to server. The app will retry automatically.'
+          );
+          setUser(null);
+
+          // Schedule an auto-retry for network errors
+          if (!retryTimeoutRef.current) {
+            retryTimeoutRef.current = setTimeout(() => {
+              retryTimeoutRef.current = null;
+              if (mountedRef.current) {
+                checkAuthStatus(true);
+              }
+            }, AUTO_RETRY_DELAY);
+          }
+        } else {
+          setError(errorMessage);
+          setUser(null);
+        }
+      }
     } finally {
-      setLoading(false);
+      if (mountedRef.current) {
+        setLoading(false);
+      }
     }
-  };
+  }, []);
 
   const login = async () => {
     try {
@@ -77,8 +128,17 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   useEffect(() => {
+    mountedRef.current = true;
     checkAuthStatus();
-  }, []);
+
+    return () => {
+      mountedRef.current = false;
+      if (retryTimeoutRef.current) {
+        clearTimeout(retryTimeoutRef.current);
+        retryTimeoutRef.current = null;
+      }
+    };
+  }, [checkAuthStatus]);
 
   const value: AuthContextType = {
     user,
@@ -86,7 +146,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     error,
     login,
     logout,
-    refetch: checkAuthStatus,
+    refetch: () => checkAuthStatus(false),
     isAdmin: user?.role === 'admin',
   };
 

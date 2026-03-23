@@ -11,12 +11,56 @@ const defaultConfig = {
   API_BASE_URL: 'http://127.0.0.1:8000', // Only used if runtime config fails to load
 };
 
+/**
+ * Sleep for a given number of milliseconds
+ */
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/**
+ * Fetch with retry logic for transient DNS/network failures
+ */
+async function fetchWithRetry(
+  url: string,
+  maxRetries: number = 2,
+  initialDelay: number = 1000
+): Promise<Response> {
+  let lastError: Error | null = null;
+
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
+
+      const response = await fetch(url, { signal: controller.signal });
+      clearTimeout(timeoutId);
+      return response;
+    } catch (error) {
+      lastError = error as Error;
+
+      if (attempt >= maxRetries) {
+        break;
+      }
+
+      const delay =
+        initialDelay * Math.pow(2, attempt) + Math.random() * 500;
+      console.warn(
+        `[Config] Fetch attempt ${attempt + 1} failed (${lastError.message}). Retrying in ${Math.round(delay)}ms...`
+      );
+      await sleep(delay);
+    }
+  }
+
+  throw lastError;
+}
+
 // Function to load runtime configuration
 export async function loadRuntimeConfig(): Promise<void> {
   try {
     console.log('🔧 DEBUG: Starting to load runtime config...');
-    // Try to load configuration from a config endpoint
-    const response = await fetch('/api/config');
+    // Try to load configuration from a config endpoint with retry
+    const response = await fetchWithRetry('/api/config');
     if (response.ok) {
       const contentType = response.headers.get('content-type');
       // Only parse as JSON if the response is actually JSON
