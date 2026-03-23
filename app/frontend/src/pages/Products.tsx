@@ -9,7 +9,6 @@ import { toast } from 'sonner';
 import Header from '@/components/Header';
 import ProductCard from '@/components/ProductCard';
 import { client } from '@/lib/api';
-import { withRetry, withRetryQuiet } from '@/lib/retry';
 
 interface Product {
   id: number;
@@ -23,7 +22,7 @@ interface Product {
   status: string;
 }
 
-const allCategories = ['all', 'clothing', 'makeup', 'combo', 'toys', 'kitchen', 'furniture', 'smartwatch', 'smart-home', 'phones', 'laptops', 'motherboards', 'storage', 'displays', 'batteries', 'memory', 'keyboards', 'processors', 'cooling', 'chargers', 'accessories'];
+const allCategories = ['all', 'motherboards', 'storage', 'displays', 'batteries', 'memory', 'keyboards', 'processors', 'cooling', 'chargers', 'accessories'];
 const allConditions = ['all', 'new', 'like-new', 'refurbished', 'used'];
 const sortOptions = [
   { value: '-created_at', label: 'Newest First' },
@@ -31,11 +30,6 @@ const sortOptions = [
   { value: '-price', label: 'Price: High to Low' },
   { value: 'title', label: 'Name: A-Z' },
 ];
-
-interface RatingInfo {
-  average_rating: number;
-  review_count: number;
-}
 
 export default function Products() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -47,42 +41,14 @@ export default function Products() {
   const [selectedCondition, setSelectedCondition] = useState('all');
   const [sortBy, setSortBy] = useState('-created_at');
   const [showFilters, setShowFilters] = useState(false);
-  const [ratings, setRatings] = useState<Record<number, RatingInfo>>({});
 
   useEffect(() => {
     loadProducts();
   }, [selectedCategory, selectedCondition, sortBy]);
 
   useEffect(() => {
-    // Stagger cart count to avoid simultaneous Lambda DNS resolution issues
-    const timer = setTimeout(() => loadCartCount(), 600);
-    return () => clearTimeout(timer);
+    loadCartCount();
   }, []);
-
-  const loadBulkRatings = async (productIds: number[]) => {
-    if (productIds.length === 0) return;
-    // Stagger ratings call to avoid simultaneous Lambda DNS resolution issues
-    await new Promise((r) => setTimeout(r, 800));
-    // Use quiet retry - ratings are non-critical UI enhancement
-    const res = await withRetryQuiet(
-      () =>
-        client.apiCall.invoke({
-          url: '/api/v1/reviews/ratings/bulk',
-          method: 'GET',
-          data: { product_ids: productIds.join(',') },
-        }),
-      { data: { ratings: [] } } as any
-    );
-    const items = res?.data?.ratings || [];
-    const map: Record<number, RatingInfo> = {};
-    for (const item of items) {
-      map[item.product_id] = {
-        average_rating: item.average_rating,
-        review_count: item.review_count,
-      };
-    }
-    setRatings(map);
-  };
 
   const loadProducts = async () => {
     setLoading(true);
@@ -94,13 +60,11 @@ export default function Products() {
       if (selectedCondition !== 'all') {
         query.condition = selectedCondition;
       }
-      const res = await withRetry(() =>
-        client.entities.products.query({
-          query,
-          sort: sortBy,
-          limit: 50,
-        })
-      );
+      const res = await client.entities.products.query({
+        query,
+        sort: sortBy,
+        limit: 50,
+      });
       let items = res?.data?.items || [];
       // Client-side search filter
       if (searchQuery.trim()) {
@@ -113,9 +77,6 @@ export default function Products() {
         );
       }
       setProducts(items);
-      // Load ratings for all products
-      const ids = items.map((p: Product) => p.id);
-      loadBulkRatings(ids);
     } catch (err) {
       console.error('Failed to load products:', err);
     } finally {
@@ -125,9 +86,9 @@ export default function Products() {
 
   const loadCartCount = async () => {
     try {
-      const user = await withRetry(() => client.auth.me());
+      const user = await client.auth.me();
       if (user?.data) {
-        const res = await withRetry(() => client.entities.cart_items.query({ query: {} }));
+        const res = await client.entities.cart_items.query({ query: {} });
         const items = res?.data?.items || [];
         setCartCount(items.reduce((sum: number, item: any) => sum + (item.quantity || 1), 0));
       }
@@ -138,35 +99,29 @@ export default function Products() {
 
   const handleAddToCart = async (productId: number) => {
     try {
-      const user = await withRetry(() => client.auth.me());
+      const user = await client.auth.me();
       if (!user?.data) {
         toast.error('Please sign in to add items to cart');
         await client.auth.toLogin();
         return;
       }
-      const cartRes = await withRetry(() =>
-        client.entities.cart_items.query({ query: { product_id: productId } })
-      );
+      const cartRes = await client.entities.cart_items.query({ query: { product_id: productId } });
       const existing = cartRes?.data?.items?.[0];
       if (existing) {
-        await withRetry(() =>
-          client.entities.cart_items.update({
-            id: existing.id,
-            data: { quantity: (existing.quantity || 1) + 1 },
-          })
-        );
+        await client.entities.cart_items.update({
+          id: existing.id,
+          data: { quantity: (existing.quantity || 1) + 1 },
+        });
       } else {
-        await withRetry(() =>
-          client.entities.cart_items.create({
-            data: { product_id: productId, quantity: 1 },
-          })
-        );
+        await client.entities.cart_items.create({
+          data: { product_id: productId, quantity: 1 },
+        });
       }
       toast.success('Added to cart!');
       loadCartCount();
     } catch (err) {
       console.error('Failed to add to cart:', err);
-      toast.error('Failed to add to cart. Please try again.');
+      toast.error('Failed to add to cart');
     }
   };
 
@@ -304,7 +259,7 @@ export default function Products() {
             ) : products.length > 0 ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                 {products.map((product) => (
-                  <ProductCard key={product.id} product={product} onAddToCart={handleAddToCart} rating={ratings[product.id]} />
+                  <ProductCard key={product.id} product={product} onAddToCart={handleAddToCart} />
                 ))}
               </div>
             ) : (

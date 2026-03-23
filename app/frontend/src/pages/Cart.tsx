@@ -7,7 +7,6 @@ import { Separator } from '@/components/ui/separator';
 import { toast } from 'sonner';
 import Header from '@/components/Header';
 import { client } from '@/lib/api';
-import { withRetry } from '@/lib/retry';
 
 interface CartItem {
   id: number | string;
@@ -43,7 +42,7 @@ export default function Cart() {
 
   const checkAuthAndLoad = async () => {
     try {
-      const res = await withRetry(() => client.auth.me());
+      const res = await client.auth.me();
       if (res?.data) {
         setUser(res.data);
         await loadCart();
@@ -57,16 +56,14 @@ export default function Cart() {
 
   const loadCart = async () => {
     try {
-      const res = await withRetry(() => client.entities.cart_items.query({ query: {} }));
+      const res = await client.entities.cart_items.query({ query: {} });
       const items: CartItem[] = res?.data?.items || [];
 
       // Load product details for each cart item
       const enriched: CartItemWithProduct[] = await Promise.all(
         items.map(async (item) => {
           try {
-            const prodRes = await withRetry(() =>
-              client.entities.products.get({ id: String(item.product_id) })
-            );
+            const prodRes = await client.entities.products.get({ id: String(item.product_id) });
             return { ...item, product: prodRes?.data };
           } catch {
             return { ...item, product: undefined };
@@ -86,31 +83,27 @@ export default function Cart() {
       return;
     }
     try {
-      await withRetry(() =>
-        client.entities.cart_items.update({
-          id: String(cartItem.id),
-          data: { quantity: newQty },
-        })
-      );
+      await client.entities.cart_items.update({
+        id: String(cartItem.id),
+        data: { quantity: newQty },
+      });
       setCartItems((prev) =>
         prev.map((item) => (item.id === cartItem.id ? { ...item, quantity: newQty } : item))
       );
     } catch (err) {
       console.error('Failed to update quantity:', err);
-      toast.error('Failed to update quantity. Please try again.');
+      toast.error('Failed to update quantity');
     }
   };
 
   const removeItem = async (cartItem: CartItemWithProduct) => {
     try {
-      await withRetry(() =>
-        client.entities.cart_items.delete({ id: String(cartItem.id) })
-      );
+      await client.entities.cart_items.delete({ id: String(cartItem.id) });
       setCartItems((prev) => prev.filter((item) => item.id !== cartItem.id));
       toast.success('Item removed from cart');
     } catch (err) {
       console.error('Failed to remove item:', err);
-      toast.error('Failed to remove item. Please try again.');
+      toast.error('Failed to remove item');
     }
   };
 
@@ -119,22 +112,18 @@ export default function Cart() {
       // Create orders for each cart item
       for (const item of cartItems) {
         if (!item.product) continue;
-        await withRetry(() =>
-          client.entities.orders.create({
-            data: {
-              product_id: item.product_id,
-              quantity: item.quantity,
-              total_price: item.product!.price * item.quantity,
-              status: 'pending',
-            },
-          })
-        );
+        await client.entities.orders.create({
+          data: {
+            product_id: item.product_id,
+            quantity: item.quantity,
+            total_price: item.product.price * item.quantity,
+            status: 'pending',
+          },
+        });
       }
       // Clear cart
       for (const item of cartItems) {
-        await withRetry(() =>
-          client.entities.cart_items.delete({ id: String(item.id) })
-        );
+        await client.entities.cart_items.delete({ id: String(item.id) });
       }
       setCartItems([]);
       toast.success('Order placed successfully!');
