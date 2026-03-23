@@ -80,16 +80,6 @@ export default function Index() {
     return () => clearTimeout(timer);
   }, []);
 
-  // Load recent searches when search bar opens
-  useEffect(() => {
-    if (searchOpen) {
-      setShowRecentSearches(true);
-      loadRecentSearches();
-    } else {
-      setShowRecentSearches(false);
-    }
-  }, [searchOpen, loadRecentSearches]);
-
   // Close recent searches dropdown on outside click
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -160,6 +150,16 @@ export default function Index() {
       // Silently fail
     }
   }, []);
+
+  // Load recent searches when search bar opens
+  useEffect(() => {
+    if (searchOpen) {
+      setShowRecentSearches(true);
+      loadRecentSearches();
+    } else {
+      setShowRecentSearches(false);
+    }
+  }, [searchOpen, loadRecentSearches]);
 
   const saveSearchQuery = async (query: string) => {
     try {
