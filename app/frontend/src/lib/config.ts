@@ -19,22 +19,51 @@ function sleep(ms: number): Promise<void> {
 }
 
 /**
- * Fetch with retry logic for transient DNS/network failures
+ * Fetch with retry logic for transient DNS/network failures.
+ * Uses more aggressive retries for initial config load since the app
+ * depends on this to function correctly.
  */
 async function fetchWithRetry(
   url: string,
-  maxRetries: number = 2,
-  initialDelay: number = 1000
+  maxRetries: number = 4,
+  initialDelay: number = 2000
 ): Promise<Response> {
   let lastError: Error | null = null;
 
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
+      const timeoutId = setTimeout(() => controller.abort(), 15000); // 15s timeout
 
       const response = await fetch(url, { signal: controller.signal });
       clearTimeout(timeoutId);
+
+      // Check if the response is a 5xx with DNS error - treat as retryable
+      if (response.status >= 500 && response.status < 600 && attempt < maxRetries) {
+        const cloned = response.clone();
+        try {
+          const body = await cloned.json();
+          const message = body?.message || body?.detail || '';
+          if (
+            typeof message === 'string' &&
+            (message.toLowerCase().includes('dns') ||
+              message.toLowerCase().includes('balancer') ||
+              message.toLowerCase().includes('callback lock') ||
+              message.toLowerCase().includes('node cache'))
+          ) {
+            const delay =
+              initialDelay * Math.pow(2, attempt) + Math.random() * 1000;
+            console.warn(
+              `[Config] Fetch attempt ${attempt + 1} got DNS error (${message.slice(0, 80)}). Retrying in ${Math.round(delay)}ms...`
+            );
+            await sleep(delay);
+            continue;
+          }
+        } catch {
+          // If we can't parse the body, just return the response
+        }
+      }
+
       return response;
     } catch (error) {
       lastError = error as Error;
@@ -44,7 +73,7 @@ async function fetchWithRetry(
       }
 
       const delay =
-        initialDelay * Math.pow(2, attempt) + Math.random() * 500;
+        initialDelay * Math.pow(2, attempt) + Math.random() * 1000;
       console.warn(
         `[Config] Fetch attempt ${attempt + 1} failed (${lastError.message}). Retrying in ${Math.round(delay)}ms...`
       );
@@ -58,7 +87,7 @@ async function fetchWithRetry(
 // Function to load runtime configuration
 export async function loadRuntimeConfig(): Promise<void> {
   try {
-    console.log('🔧 DEBUG: Starting to load runtime config...');
+    console.log('🔧 Loading runtime config...');
     // Try to load configuration from a config endpoint with retry
     const response = await fetchWithRetry('/api/config');
     if (response.ok) {
@@ -73,18 +102,12 @@ export async function loadRuntimeConfig(): Promise<void> {
         );
       }
     } else {
-      console.log(
-        '🔧 DEBUG: Config fetch failed with status:',
-        response.status
-      );
+      console.log('Config fetch failed with status:', response.status);
     }
   } catch (error) {
     console.log('Failed to load runtime config, using defaults:', error);
   } finally {
     configLoading = false;
-    console.log(
-      '🔧 DEBUG: Config loading finished, configLoading set to false'
-    );
   }
 }
 
@@ -92,13 +115,11 @@ export async function loadRuntimeConfig(): Promise<void> {
 export function getConfig() {
   // If config is still loading, return default config to avoid using stale Vite env vars
   if (configLoading) {
-    console.log('Config still loading, using default config');
     return defaultConfig;
   }
 
   // First try runtime config (for Lambda)
   if (runtimeConfig) {
-    console.log('Using runtime config');
     return runtimeConfig;
   }
 
@@ -107,12 +128,10 @@ export function getConfig() {
     const viteConfig = {
       API_BASE_URL: import.meta.env.VITE_API_BASE_URL,
     };
-    console.log('Using Vite environment config');
     return viteConfig;
   }
 
   // Finally fall back to default
-  console.log('Using default config');
   return defaultConfig;
 }
 
@@ -120,10 +139,6 @@ export function getConfig() {
 export function getAPIBaseURL(): string {
   return getConfig().API_BASE_URL;
 }
-
-// For backward compatibility, but this should be avoided
-// Removed static export to prevent using stale config values
-// export const API_BASE_URL = getAPIBaseURL();
 
 export const config = {
   get API_BASE_URL() {
