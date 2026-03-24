@@ -10,7 +10,6 @@ import { client } from '@/lib/api';
 import { withRetry, withRetryQuiet } from '@/lib/retry';
 
 const HERO_IMAGE = 'https://mgx-backend-cdn.metadl.com/generate/images/1040407/2026-03-18/8db7c9fe-7e9e-4248-a343-e5e92c3ed9e4.png';
-const REPAIR_IMAGE = 'https://mgx-backend-cdn.metadl.com/generate/images/1040407/2026-03-18/b4f787f3-521f-433a-adbb-011f6bfd6924.png';
 const STORE_IMAGE = 'https://mgx-backend-cdn.metadl.com/generate/images/1040407/2026-03-18/d76cb9c0-b3bc-4f6b-b368-0d175b59f0c2.png';
 
 interface Product {
@@ -65,6 +64,8 @@ export default function Index() {
   const [showRecentSearches, setShowRecentSearches] = useState(false);
   const searchContainerRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
+  // Cache the user data to avoid duplicate auth calls
+  const userCacheRef = useRef<any>(null);
 
   const sections = [
     { id: 'features', label: 'Features', icon: Shield },
@@ -74,12 +75,72 @@ export default function Index() {
   ];
 
   useEffect(() => {
-    // Load products first, then stagger other calls to reduce simultaneous Lambda DNS hits
-    loadFeaturedProducts();
-    checkAuth();
-    const timer = setTimeout(() => loadCartCount(), 800);
-    return () => clearTimeout(timer);
+    // CRITICAL: Serialize initial page load to prevent concurrent Lambda DNS issues.
+    // Step 1: Load products (this is the warm-up request)
+    // Step 2: After products load, check auth
+    // Step 3: After auth, load cart count (only if logged in)
+    // This prevents 3+ simultaneous requests from hitting a cold Lambda.
+    loadInitialData();
   }, []);
+
+  /**
+   * Sequential data loading to prevent concurrent DNS resolution failures.
+   * Products load first (warm-up), then auth, then cart.
+   */
+  const loadInitialData = async () => {
+    // Step 1: Load featured products first - this warms up the Lambda
+    try {
+      const res = await withRetry(() =>
+        client.entities.products.query({
+          query: { status: 'active' },
+          limit: 8,
+          sort: '-created_at',
+        })
+      );
+      const items = res?.data?.items || [];
+      setFeaturedProducts(items);
+      setLoading(false);
+
+      // Step 2: Now that Lambda is warm, check auth
+      try {
+        const authRes = await withRetry(() => client.auth.me());
+        if (authRes?.data) {
+          setUser(authRes.data);
+          userCacheRef.current = authRes.data;
+
+          // Step 3: Load cart count only if logged in (sequential, not parallel)
+          try {
+            const cartRes = await withRetry(() =>
+              client.entities.cart_items.query({ query: {} })
+            );
+            const cartItems = cartRes?.data?.items || [];
+            setCartCount(
+              cartItems.reduce(
+                (sum: number, item: any) => sum + (item.quantity || 1),
+                0
+              )
+            );
+          } catch {
+            // Cart load failed - non-critical
+          }
+        }
+      } catch {
+        // Not logged in - that's fine
+      } finally {
+        setAuthChecked(true);
+      }
+
+      // Step 4: Load ratings in background (non-critical, uses withRetryQuiet which waits for warm)
+      const ids = items.map((p: Product) => p.id);
+      if (ids.length > 0) {
+        loadBulkRatings(ids);
+      }
+    } catch (err) {
+      console.error('Failed to load products:', err);
+      setLoading(false);
+      setAuthChecked(true);
+    }
+  };
 
   // Close recent searches dropdown on outside click
   useEffect(() => {
@@ -94,10 +155,8 @@ export default function Index() {
 
   useEffect(() => {
     const handleScroll = () => {
-      // Show jump nav after scrolling past hero
       setShowJumpNav(window.scrollY > 400);
 
-      // Determine active section
       const offsets = sections.map(({ id }) => {
         const el = document.getElementById(id);
         if (!el) return { id, top: Infinity };
@@ -124,8 +183,11 @@ export default function Index() {
 
   const loadRecentSearches = useCallback(async () => {
     try {
-      const u = await withRetryQuiet(() => client.auth.me(), null);
-      if (!u?.data) return;
+      // Use cached user instead of making another auth call
+      if (!userCacheRef.current) {
+        const u = await withRetryQuiet(() => client.auth.me(), null);
+        if (!u?.data) return;
+      }
       const res = await withRetryQuiet(
         () =>
           client.entities.search_histories.query({
@@ -136,7 +198,6 @@ export default function Index() {
         { data: { items: [] } } as any
       );
       const items = res?.data?.items || [];
-      // Deduplicate by query text (keep most recent)
       const seen = new Set<string>();
       const unique: { id: number; query: string }[] = [];
       for (const item of items) {
@@ -183,8 +244,7 @@ export default function Index() {
 
   const saveSearchQuery = async (query: string) => {
     try {
-      const u = await withRetryQuiet(() => client.auth.me(), null);
-      if (!u?.data) return;
+      if (!userCacheRef.current) return;
       await withRetryQuiet(
         () =>
           client.entities.search_histories.create({
@@ -196,7 +256,7 @@ export default function Index() {
         null
       );
     } catch {
-      // Silently fail - don't block search
+      // Silently fail
     }
   };
 
@@ -232,29 +292,12 @@ export default function Index() {
     setShowRecentSearches(false);
   };
 
-  const checkAuth = async () => {
-    try {
-      const res = await withRetry(() => client.auth.me());
-      if (res?.data) {
-        setUser(res.data);
-      }
-    } catch {
-      // Not logged in
-    } finally {
-      setAuthChecked(true);
-    }
-  };
-
   const handleSignUp = async () => {
     await client.auth.toLogin();
   };
 
   const loadBulkRatings = async (productIds: number[]) => {
     if (productIds.length === 0) return;
-    // Stagger ratings call significantly to avoid simultaneous Lambda DNS resolution issues
-    await new Promise((r) => setTimeout(r, 1200));
-    // Use quiet retry - ratings are non-critical UI enhancement
-    // The global request queue in retry.ts will serialize this with other in-flight requests
     const res = await withRetryQuiet(
       () =>
         client.apiCall.invoke({
@@ -275,43 +318,15 @@ export default function Index() {
     setRatings(map);
   };
 
-  const loadFeaturedProducts = async () => {
-    try {
-      const res = await withRetry(() =>
-        client.entities.products.query({
-          query: { status: 'active' },
-          limit: 8,
-          sort: '-created_at',
-        })
-      );
-      const items = res?.data?.items || [];
-      setFeaturedProducts(items);
-      const ids = items.map((p: Product) => p.id);
-      loadBulkRatings(ids);
-    } catch (err) {
-      console.error('Failed to load products:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const loadCartCount = async () => {
-    try {
-      const user = await withRetry(() => client.auth.me());
-      if (user?.data) {
-        const res = await withRetry(() => client.entities.cart_items.query({ query: {} }));
-        const items = res?.data?.items || [];
-        setCartCount(items.reduce((sum: number, item: any) => sum + (item.quantity || 1), 0));
-      }
-    } catch {
-      // Not logged in
-    }
-  };
-
   const handleAddToCart = async (productId: number) => {
     try {
-      const user = await withRetry(() => client.auth.me());
-      if (!user?.data) {
+      // Use cached user or check auth
+      let currentUser = userCacheRef.current;
+      if (!currentUser) {
+        const authRes = await withRetry(() => client.auth.me());
+        currentUser = authRes?.data;
+      }
+      if (!currentUser) {
         toast.error('Please sign in to add items to cart');
         await client.auth.toLogin();
         return;
@@ -336,7 +351,16 @@ export default function Index() {
         );
       }
       toast.success('Added to cart!');
-      loadCartCount();
+      // Reload cart count
+      try {
+        const res = await withRetry(() =>
+          client.entities.cart_items.query({ query: {} })
+        );
+        const items = res?.data?.items || [];
+        setCartCount(items.reduce((sum: number, item: any) => sum + (item.quantity || 1), 0));
+      } catch {
+        // Non-critical
+      }
     } catch (err) {
       console.error('Failed to add to cart:', err);
       toast.error('Failed to add to cart. Please try again.');
@@ -396,7 +420,6 @@ export default function Index() {
       <nav className="sticky top-16 z-40 bg-slate-900/95 backdrop-blur-md border-y border-slate-700/50 shadow-lg shadow-black/20">
         <div className="container mx-auto px-4">
           <div className="flex items-center justify-between h-12 gap-2">
-            {/* Section jump links - hidden when search is open on mobile */}
             <div className={`flex items-center gap-1 sm:gap-2 overflow-x-auto scrollbar-hide ${searchOpen ? 'hidden sm:flex' : 'flex'}`}>
               {sections.map(({ id, label, icon: Icon }) => (
                 <button
@@ -414,9 +437,7 @@ export default function Index() {
               ))}
             </div>
 
-            {/* Search + Back to Top */}
             <div className="flex items-center gap-1 shrink-0">
-              {/* Search bar with recent searches */}
               <div ref={searchContainerRef} className="relative">
                 <form
                   onSubmit={handleSearch}
@@ -445,10 +466,8 @@ export default function Index() {
                   </button>
                 </form>
 
-                {/* Search Dropdown: Recent + Trending */}
                 {searchOpen && showRecentSearches && (recentSearches.length > 0 || trendingSearches.length > 0) && (
                   <div className="absolute top-full right-0 mt-2 w-72 sm:w-80 bg-slate-800 border border-slate-700 rounded-xl shadow-2xl shadow-black/40 overflow-hidden z-50 max-h-[360px] overflow-y-auto">
-                    {/* Recent Searches */}
                     {recentSearches.length > 0 && (
                       <>
                         <div className="flex items-center justify-between px-3 py-2 border-b border-slate-700/50">
@@ -487,7 +506,6 @@ export default function Index() {
                       </>
                     )}
 
-                    {/* Trending Searches */}
                     {trendingSearches.length > 0 && (
                       <>
                         <div className="flex items-center justify-between px-3 py-2 border-b border-slate-700/50 border-t border-t-slate-700/30">
@@ -522,7 +540,6 @@ export default function Index() {
                 )}
               </div>
 
-              {/* Search icon toggle */}
               {!searchOpen && (
                 <button
                   onClick={() => setSearchOpen(true)}
@@ -534,10 +551,8 @@ export default function Index() {
                 </button>
               )}
 
-              {/* Divider */}
               <div className="h-5 w-px bg-slate-700 mx-0.5" />
 
-              {/* Back to top */}
               <button
                 onClick={scrollToTop}
                 className="flex items-center gap-1 px-2.5 py-1.5 rounded-full text-xs sm:text-sm font-medium text-slate-400 hover:text-white hover:bg-slate-800 transition-all duration-200 shrink-0"

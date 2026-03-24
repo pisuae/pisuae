@@ -12,7 +12,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { client } from '@/lib/api';
-import { withRetry, withRetryQuiet } from '@/lib/retry';
+import { withRetryQuiet } from '@/lib/retry';
 
 interface HeaderProps {
   cartCount?: number;
@@ -30,14 +30,17 @@ export default function Header({ cartCount = 0, onSearch }: HeaderProps) {
 
     const checkAuth = async () => {
       try {
-        const res = await withRetry(() => client.auth.me());
+        // Use withRetryQuiet - Header auth is non-critical and should wait for Lambda warm-up
+        // The Index page's loadInitialData will warm up the Lambda first
+        const res = await withRetryQuiet(
+          () => client.auth.me(),
+          null
+        );
         if (cancelled) return;
         if (res?.data) {
           setUser(res.data);
-          // Stagger the vendor check to avoid simultaneous Lambda cold-start DNS issues
-          await new Promise((r) => setTimeout(r, 300));
+          // Vendor check is also non-critical
           if (cancelled) return;
-          // Use quiet retry for vendor check - it's non-critical UI state
           const vendorRes = await withRetryQuiet(
             () => client.entities.vendors.query({ query: {} }),
             { data: { items: [] } } as any
