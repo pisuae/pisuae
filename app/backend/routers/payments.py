@@ -10,7 +10,7 @@ from core.database import get_db
 from dependencies.auth import get_current_user
 from schemas.auth import UserResponse
 from services.orders import OrdersService
-from services.cart_items import CartItemsService
+from services.cart_items import Cart_itemsService as CartItemsService
 from services.products import ProductsService
 from services.payment import PaymentService, CheckoutSessionRequest, CheckoutError
 

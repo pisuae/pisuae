@@ -188,23 +188,71 @@ export default function Checkout() {
         })
       );
 
-      if (res?.data?.url) {
+      // Check for error responses from the backend
+      const status = res?.status ?? res?.statusCode;
+      if (typeof status === 'number' && status >= 400) {
+        const detail =
+          res?.data?.detail ||
+          res?.data?.message ||
+          (typeof res?.data === 'string' ? res.data : null);
+        console.error('Stripe checkout error response:', res);
+        toast.error(detail || 'Payment failed. Please try again.');
+        return;
+      }
+
+      // Handle successful response - check nested data structure
+      const checkoutUrl = res?.data?.url || res?.data?.data?.url;
+      const sessionId = res?.data?.session_id || res?.data?.data?.session_id;
+
+      if (checkoutUrl) {
         sessionStorage.removeItem('checkout_items');
-        // Use window.location.href for reliable redirect to Stripe checkout
-        // client.utils.openUrl may not work in all environments (PWA, embedded webview)
         try {
-          window.location.href = res.data.url;
+          window.location.href = checkoutUrl;
         } catch {
-          // Fallback: try opening in new tab
-          window.open(res.data.url, '_blank');
+          window.open(checkoutUrl, '_blank');
         }
+      } else if (sessionId) {
+        // Session created but no URL - might be embedded mode
+        sessionStorage.removeItem('checkout_items');
+        toast.error('Payment session created but redirect URL is missing. Please contact support.');
+        console.error('Stripe session without URL:', res);
       } else {
-        console.error('Stripe checkout response:', res);
+        console.error('Stripe checkout unexpected response:', JSON.stringify(res?.data));
         toast.error('Failed to create payment session. Please try again.');
       }
-    } catch (err) {
+    } catch (err: unknown) {
       console.error('Stripe checkout failed:', err);
-      toast.error('Payment setup failed. Please try again.');
+      // Extract meaningful error message
+      let errorMsg = 'Payment setup failed. Please try again.';
+      if (err && typeof err === 'object') {
+        const errObj = err as Record<string, unknown>;
+        const detail =
+          errObj.detail ??
+          errObj.message ??
+          (errObj.data && typeof errObj.data === 'object'
+            ? (errObj.data as Record<string, unknown>).detail ??
+              (errObj.data as Record<string, unknown>).message
+            : undefined);
+        if (typeof detail === 'string' && detail.length > 0 && detail.length < 200) {
+          errorMsg = detail;
+        }
+        // Check for Stripe-specific errors
+        const statusCode = errObj.status ?? errObj.statusCode;
+        if (typeof statusCode === 'number') {
+          if (statusCode === 401 || statusCode === 403) {
+            errorMsg = 'Authentication error. Please sign in again.';
+          } else if (statusCode === 400) {
+            errorMsg = typeof detail === 'string' ? detail : 'Invalid checkout request. Please check your cart.';
+          }
+        }
+      }
+      if (err instanceof Error) {
+        const msg = err.message.toLowerCase();
+        if (msg.includes('dns') || msg.includes('network') || msg.includes('timeout') || msg.includes('fetch failed')) {
+          errorMsg = 'Network error. The server may be starting up. Please wait a moment and try again.';
+        }
+      }
+      toast.error(errorMsg);
     } finally {
       setProcessing(false);
     }

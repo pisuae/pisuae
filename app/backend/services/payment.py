@@ -261,6 +261,7 @@ class PaymentService:
                 "line_items": line_items,
                 "mode": request.mode,
                 "metadata": request.metadata or {},
+                "payment_method_types": ["card"],
             }
 
             if request.ui_mode == "embedded":
