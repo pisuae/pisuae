@@ -1,23 +1,52 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Store, ArrowRight, CheckCircle, Percent, TrendingUp, Users } from 'lucide-react';
+import { Store, ArrowRight, CheckCircle, Percent, TrendingUp, Users, Building2, Mail, Phone, Landmark } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Separator } from '@/components/ui/separator';
 import { toast } from 'sonner';
 import Header from '@/components/Header';
 import { client } from '@/lib/api';
 
 const PLATFORM_COMMISSION = 15;
 
+const BUSINESS_TYPES = [
+  'Electronics & Gadgets',
+  'Computer Parts & Accessories',
+  'Mobile Phones & Tablets',
+  'Laptops & Desktops',
+  'Networking Equipment',
+  'Gaming & Consoles',
+  'Beauty & Makeup',
+  'Fashion & Apparel',
+  'Home & Kitchen',
+  'General Trading',
+  'Other',
+];
+
 export default function VendorSignup() {
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [existingVendor, setExistingVendor] = useState<any>(null);
+  const [step, setStep] = useState(1);
+
+  // Step 1: Business Info
   const [businessName, setBusinessName] = useState('');
+  const [businessType, setBusinessType] = useState('');
+  const [email, setEmail] = useState('');
+  const [mobileNumber, setMobileNumber] = useState('');
   const [description, setDescription] = useState('');
+
+  // Step 2: Bank Details
+  const [bankName, setBankName] = useState('');
+  const [accountHolder, setAccountHolder] = useState('');
+  const [accountNumber, setAccountNumber] = useState('');
+  const [iban, setIban] = useState('');
+
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -29,7 +58,6 @@ export default function VendorSignup() {
       const res = await client.auth.me();
       if (res?.data) {
         setUser(res.data);
-        // Check if already a vendor
         const vendorRes = await client.entities.vendors.query({ query: {} });
         const vendors = vendorRes?.data?.items || [];
         if (vendors.length > 0) {
@@ -47,26 +75,87 @@ export default function VendorSignup() {
     await client.auth.toLogin();
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const validateStep1 = () => {
     if (!businessName.trim()) {
       toast.error('Please enter your business name');
-      return;
+      return false;
     }
+    if (!businessType) {
+      toast.error('Please select your type of business');
+      return false;
+    }
+    if (!email.trim()) {
+      toast.error('Please enter a valid email address');
+      return false;
+    }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email.trim())) {
+      toast.error('Please enter a valid email address');
+      return false;
+    }
+    if (!mobileNumber.trim()) {
+      toast.error('Please enter your mobile number');
+      return false;
+    }
+    if (mobileNumber.trim().length < 7) {
+      toast.error('Please enter a valid mobile number');
+      return false;
+    }
+    return true;
+  };
+
+  const validateStep2 = () => {
+    if (!bankName.trim()) {
+      toast.error('Please enter your bank name');
+      return false;
+    }
+    if (!accountHolder.trim()) {
+      toast.error('Please enter the account holder name');
+      return false;
+    }
+    if (!accountNumber.trim()) {
+      toast.error('Please enter your bank account number');
+      return false;
+    }
+    if (!iban.trim()) {
+      toast.error('Please enter your IBAN number');
+      return false;
+    }
+    return true;
+  };
+
+  const handleNextStep = () => {
+    if (validateStep1()) {
+      setStep(2);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!validateStep2()) return;
+
     setSubmitting(true);
     try {
       await client.entities.vendors.create({
         data: {
           business_name: businessName.trim(),
+          business_type: businessType,
+          email: email.trim(),
+          mobile_number: mobileNumber.trim(),
+          bank_name: bankName.trim(),
+          bank_account_holder: accountHolder.trim(),
+          bank_account_number: accountNumber.trim(),
+          bank_iban: iban.trim(),
+          bank_verified: 'pending',
           description: description.trim(),
           commission_rate: PLATFORM_COMMISSION,
-          status: 'active',
+          status: 'pending_verification',
           total_sales: 0,
           total_earnings: 0,
           created_at: new Date().toISOString(),
         },
       });
-      toast.success('Vendor account created successfully!');
+      toast.success('Vendor application submitted! Your bank details are under verification.');
       navigate('/vendor/dashboard');
     } catch (err) {
       console.error('Failed to create vendor account:', err);
@@ -87,7 +176,6 @@ export default function VendorSignup() {
     );
   }
 
-  // Already a vendor - redirect
   if (existingVendor) {
     return (
       <div className="min-h-screen bg-slate-950 text-white">
@@ -128,7 +216,7 @@ export default function VendorSignup() {
             </span>
           </h1>
           <p className="text-slate-400 max-w-lg mx-auto text-lg">
-            Join our marketplace and reach thousands of tech buyers. List your products and start earning today.
+            Join our marketplace and reach thousands of buyers. List your products and start earning today.
           </p>
         </div>
 
@@ -141,7 +229,7 @@ export default function VendorSignup() {
               </div>
               <h3 className="font-semibold text-white">Wide Reach</h3>
               <p className="text-sm text-slate-400">
-                Access thousands of tech buyers looking for laptop parts & electronics.
+                Access thousands of buyers looking for electronics, beauty & more.
               </p>
             </CardContent>
           </Card>
@@ -169,6 +257,27 @@ export default function VendorSignup() {
           </Card>
         </div>
 
+        {/* Step Indicator */}
+        {user && (
+          <div className="max-w-lg mx-auto mb-6">
+            <div className="flex items-center justify-center gap-4">
+              <div className="flex items-center gap-2">
+                <div className={`h-8 w-8 rounded-full flex items-center justify-center text-sm font-bold ${step >= 1 ? 'bg-blue-600 text-white' : 'bg-slate-700 text-slate-400'}`}>
+                  1
+                </div>
+                <span className={`text-sm ${step >= 1 ? 'text-white' : 'text-slate-500'}`}>Business Info</span>
+              </div>
+              <div className={`h-0.5 w-12 ${step >= 2 ? 'bg-blue-600' : 'bg-slate-700'}`} />
+              <div className="flex items-center gap-2">
+                <div className={`h-8 w-8 rounded-full flex items-center justify-center text-sm font-bold ${step >= 2 ? 'bg-blue-600 text-white' : 'bg-slate-700 text-slate-400'}`}>
+                  2
+                </div>
+                <span className={`text-sm ${step >= 2 ? 'text-white' : 'text-slate-500'}`}>Bank Details</span>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Signup Form */}
         <div className="max-w-lg mx-auto">
           {!user ? (
@@ -186,19 +295,23 @@ export default function VendorSignup() {
                 </Button>
               </CardContent>
             </Card>
-          ) : (
+          ) : step === 1 ? (
             <Card className="bg-slate-800/50 border-slate-700/50">
               <CardHeader>
-                <CardTitle className="text-white text-xl">Create Vendor Account</CardTitle>
+                <CardTitle className="text-white text-xl flex items-center gap-2">
+                  <Building2 className="h-5 w-5 text-blue-400" />
+                  Business Information
+                </CardTitle>
                 <CardDescription className="text-slate-400">
                   Fill in your business details to start selling on PIS UAE.
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <form onSubmit={handleSubmit} className="space-y-5">
+                <div className="space-y-5">
                   <div>
                     <label className="block text-sm font-medium text-slate-300 mb-2">
-                      Business Name *
+                      <Store className="h-3.5 w-3.5 inline mr-1" />
+                      Business Name <span className="text-red-400">*</span>
                     </label>
                     <Input
                       type="text"
@@ -206,9 +319,56 @@ export default function VendorSignup() {
                       value={businessName}
                       onChange={(e) => setBusinessName(e.target.value)}
                       className="bg-slate-900 border-slate-600 text-white placeholder:text-slate-500 focus:border-blue-500"
-                      required
                     />
                   </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-slate-300 mb-2">
+                      <Building2 className="h-3.5 w-3.5 inline mr-1" />
+                      Type of Business <span className="text-red-400">*</span>
+                    </label>
+                    <Select value={businessType} onValueChange={setBusinessType}>
+                      <SelectTrigger className="bg-slate-900 border-slate-600 text-white focus:border-blue-500">
+                        <SelectValue placeholder="Select your business type" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-slate-800 border-slate-700">
+                        {BUSINESS_TYPES.map((type) => (
+                          <SelectItem key={type} value={type} className="text-white hover:bg-slate-700 focus:bg-slate-700">
+                            {type}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-slate-300 mb-2">
+                      <Mail className="h-3.5 w-3.5 inline mr-1" />
+                      Valid Email <span className="text-red-400">*</span>
+                    </label>
+                    <Input
+                      type="email"
+                      placeholder="business@example.com"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      className="bg-slate-900 border-slate-600 text-white placeholder:text-slate-500 focus:border-blue-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-slate-300 mb-2">
+                      <Phone className="h-3.5 w-3.5 inline mr-1" />
+                      Mobile Number <span className="text-red-400">*</span>
+                    </label>
+                    <Input
+                      type="tel"
+                      placeholder="+971 XX XXX XXXX"
+                      value={mobileNumber}
+                      onChange={(e) => setMobileNumber(e.target.value)}
+                      className="bg-slate-900 border-slate-600 text-white placeholder:text-slate-500 focus:border-blue-500"
+                    />
+                  </div>
+
                   <div>
                     <label className="block text-sm font-medium text-slate-300 mb-2">
                       Business Description
@@ -217,9 +377,99 @@ export default function VendorSignup() {
                       placeholder="Tell buyers about your business and what you sell..."
                       value={description}
                       onChange={(e) => setDescription(e.target.value)}
-                      className="bg-slate-900 border-slate-600 text-white placeholder:text-slate-500 focus:border-blue-500 min-h-[100px]"
+                      className="bg-slate-900 border-slate-600 text-white placeholder:text-slate-500 focus:border-blue-500 min-h-[80px]"
                     />
                   </div>
+
+                  <Button
+                    type="button"
+                    onClick={handleNextStep}
+                    className="w-full bg-blue-600 hover:bg-blue-500 text-white py-3"
+                  >
+                    Next: Bank Details
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          ) : (
+            <Card className="bg-slate-800/50 border-slate-700/50">
+              <CardHeader>
+                <CardTitle className="text-white text-xl flex items-center gap-2">
+                  <Landmark className="h-5 w-5 text-emerald-400" />
+                  Verified Bank Details
+                </CardTitle>
+                <CardDescription className="text-slate-400">
+                  Provide your bank details for receiving payments. All details will be verified.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <form onSubmit={handleSubmit} className="space-y-5">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-300 mb-2">
+                      Bank Name <span className="text-red-400">*</span>
+                    </label>
+                    <Input
+                      type="text"
+                      placeholder="e.g. Emirates NBD, ADCB, FAB"
+                      value={bankName}
+                      onChange={(e) => setBankName(e.target.value)}
+                      className="bg-slate-900 border-slate-600 text-white placeholder:text-slate-500 focus:border-blue-500"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-slate-300 mb-2">
+                      Account Holder Name <span className="text-red-400">*</span>
+                    </label>
+                    <Input
+                      type="text"
+                      placeholder="Full name as on bank account"
+                      value={accountHolder}
+                      onChange={(e) => setAccountHolder(e.target.value)}
+                      className="bg-slate-900 border-slate-600 text-white placeholder:text-slate-500 focus:border-blue-500"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-slate-300 mb-2">
+                      Account Number <span className="text-red-400">*</span>
+                    </label>
+                    <Input
+                      type="text"
+                      placeholder="Enter your bank account number"
+                      value={accountNumber}
+                      onChange={(e) => setAccountNumber(e.target.value)}
+                      className="bg-slate-900 border-slate-600 text-white placeholder:text-slate-500 focus:border-blue-500"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-slate-300 mb-2">
+                      IBAN Number <span className="text-red-400">*</span>
+                    </label>
+                    <Input
+                      type="text"
+                      placeholder="e.g. AE07 0331 0000 0000 0000 00"
+                      value={iban}
+                      onChange={(e) => setIban(e.target.value)}
+                      className="bg-slate-900 border-slate-600 text-white placeholder:text-slate-500 focus:border-blue-500"
+                      required
+                    />
+                  </div>
+
+                  <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-4">
+                    <p className="text-sm text-amber-300 flex items-start gap-2">
+                      <Landmark className="h-4 w-4 mt-0.5 shrink-0" />
+                      Your bank details will be verified within 1-2 business days. You'll receive a confirmation once verified.
+                    </p>
+                  </div>
+
+                  <Separator className="bg-slate-700" />
+
                   <div className="bg-slate-900/50 border border-slate-700 rounded-lg p-4">
                     <div className="flex items-center justify-between">
                       <span className="text-sm text-slate-400">Platform Commission</span>
@@ -229,23 +479,34 @@ export default function VendorSignup() {
                       You keep {100 - PLATFORM_COMMISSION}% of every sale. Commission is deducted automatically.
                     </p>
                   </div>
-                  <Button
-                    type="submit"
-                    disabled={submitting}
-                    className="w-full bg-blue-600 hover:bg-blue-500 text-white py-3"
-                  >
-                    {submitting ? (
-                      <span className="flex items-center gap-2">
-                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
-                        Creating Account...
-                      </span>
-                    ) : (
-                      <span className="flex items-center gap-2">
-                        <Store className="h-4 w-4" />
-                        Create Vendor Account
-                      </span>
-                    )}
-                  </Button>
+
+                  <div className="flex gap-3">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setStep(1)}
+                      className="flex-1 border-slate-600 text-slate-300 hover:bg-slate-800 hover:text-white"
+                    >
+                      Back
+                    </Button>
+                    <Button
+                      type="submit"
+                      disabled={submitting}
+                      className="flex-[2] bg-blue-600 hover:bg-blue-500 text-white py-3"
+                    >
+                      {submitting ? (
+                        <span className="flex items-center gap-2">
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
+                          Submitting...
+                        </span>
+                      ) : (
+                        <span className="flex items-center gap-2">
+                          <Store className="h-4 w-4" />
+                          Submit Vendor Application
+                        </span>
+                      )}
+                    </Button>
+                  </div>
                 </form>
               </CardContent>
             </Card>
