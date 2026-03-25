@@ -1,0 +1,48 @@
+{
+    "title": "order_tracking",
+    "type": "object",
+    "properties": {
+        "id": {
+            "type": "integer",
+            "description": "Primary key, auto-increment"
+        },
+        "user_id": {
+            "type": "string",
+            "description": "User ID who owns the order"
+        },
+        "order_id": {
+            "type": "integer",
+            "description": "Reference to the order"
+        },
+        "status": {
+            "type": "string",
+            "description": "Order status: confirmed, shipped, out_for_delivery, delivered"
+        },
+        "title": {
+            "type": "string",
+            "description": "Short title for the status update"
+        },
+        "description": {
+            "type": "string",
+            "description": "Detailed description of the status update"
+        },
+        "timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "description": "When this status update occurred"
+        },
+        "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Record creation time"
+        }
+    },
+    "required": [
+        "id",
+        "user_id",
+        "order_id",
+        "status",
+        "title",
+        "timestamp"
+    ]
+}

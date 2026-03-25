@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, CreditCard, Banknote, MapPin, Phone, ShoppingBag, Truck, Shield } from 'lucide-react';
+import { ArrowLeft, CreditCard, Banknote, MapPin, Phone, ShoppingBag, Truck, Shield, User, Mail } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -38,6 +38,8 @@ export default function Checkout() {
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<'cod' | 'stripe'>('cod');
+  const [fullName, setFullName] = useState('');
+  const [email, setEmail] = useState('');
   const [shippingAddress, setShippingAddress] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
 
@@ -112,16 +114,29 @@ export default function Checkout() {
   const totalItemCount = items.reduce((sum, item) => sum + item.quantity, 0);
 
   const validateForm = () => {
-    if (!shippingAddress.trim()) {
-      toast.error('Please enter your shipping address');
+    if (!fullName.trim()) {
+      toast.error('Please enter your full name');
+      return false;
+    }
+    if (!email.trim()) {
+      toast.error('Please enter your email address');
+      return false;
+    }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email.trim())) {
+      toast.error('Please enter a valid email address');
       return false;
     }
     if (!phoneNumber.trim()) {
-      toast.error('Please enter your phone number');
+      toast.error('Please enter your mobile number');
       return false;
     }
     if (phoneNumber.trim().length < 7) {
-      toast.error('Please enter a valid phone number');
+      toast.error('Please enter a valid mobile number');
+      return false;
+    }
+    if (!shippingAddress.trim()) {
+      toast.error('Please enter your shipping address');
       return false;
     }
     return true;
@@ -143,6 +158,8 @@ export default function Checkout() {
           method: 'POST',
           data: {
             items: payload,
+            full_name: fullName.trim(),
+            email: email.trim(),
             shipping_address: shippingAddress.trim(),
             phone_number: phoneNumber.trim(),
           },
@@ -180,6 +197,8 @@ export default function Checkout() {
           method: 'POST',
           data: {
             items: payload,
+            full_name: fullName.trim(),
+            email: email.trim(),
             shipping_address: shippingAddress.trim(),
             phone_number: phoneNumber.trim(),
             success_url: `${window.location.origin}/payment-success?session_id={CHECKOUT_SESSION_ID}`,
@@ -310,6 +329,47 @@ export default function Checkout() {
                 </div>
                 <Separator className="bg-slate-700" />
                 <div className="space-y-4">
+                  <div className="grid sm:grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="fullName" className="text-sm text-slate-300 mb-2 block">
+                        Full Name *
+                      </Label>
+                      <Input
+                        id="fullName"
+                        placeholder="Enter your full name"
+                        value={fullName}
+                        onChange={(e) => setFullName(e.target.value)}
+                        className="bg-slate-900 border-slate-700 text-white placeholder:text-slate-500 focus:border-blue-500"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="email" className="text-sm text-slate-300 mb-2 block">
+                        Email Address *
+                      </Label>
+                      <Input
+                        id="email"
+                        type="email"
+                        placeholder="you@example.com"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        className="bg-slate-900 border-slate-700 text-white placeholder:text-slate-500 focus:border-blue-500"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <Label htmlFor="phone" className="text-sm text-slate-300 mb-2 block">
+                      <Phone className="h-3.5 w-3.5 inline mr-1" />
+                      Mobile Number *
+                    </Label>
+                    <Input
+                      id="phone"
+                      type="tel"
+                      placeholder="+971 XX XXX XXXX"
+                      value={phoneNumber}
+                      onChange={(e) => setPhoneNumber(e.target.value)}
+                      className="bg-slate-900 border-slate-700 text-white placeholder:text-slate-500 focus:border-blue-500"
+                    />
+                  </div>
                   <div>
                     <Label htmlFor="address" className="text-sm text-slate-300 mb-2 block">
                       <MapPin className="h-3.5 w-3.5 inline mr-1" />
@@ -320,20 +380,6 @@ export default function Checkout() {
                       placeholder="Enter your full delivery address..."
                       value={shippingAddress}
                       onChange={(e) => setShippingAddress(e.target.value)}
-                      className="bg-slate-900 border-slate-700 text-white placeholder:text-slate-500 focus:border-blue-500"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="phone" className="text-sm text-slate-300 mb-2 block">
-                      <Phone className="h-3.5 w-3.5 inline mr-1" />
-                      Phone Number *
-                    </Label>
-                    <Input
-                      id="phone"
-                      type="tel"
-                      placeholder="+971 XX XXX XXXX"
-                      value={phoneNumber}
-                      onChange={(e) => setPhoneNumber(e.target.value)}
                       className="bg-slate-900 border-slate-700 text-white placeholder:text-slate-500 focus:border-blue-500"
                     />
                   </div>
