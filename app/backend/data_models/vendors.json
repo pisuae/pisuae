@@ -14,13 +14,9 @@
             "type": "string",
             "description": "Business name"
         },
-        "business_type": {
-            "type": "string",
-            "description": "Type of business"
-        },
         "email": {
             "type": "string",
-            "description": "Valid email"
+            "description": "Business email"
         },
         "mobile_number": {
             "type": "string",
@@ -48,7 +44,7 @@
         },
         "description": {
             "type": "string",
-            "description": "Vendor description"
+            "description": "Business description"
         },
         "commission_rate": {
             "type": "number",
@@ -64,7 +60,7 @@
         },
         "total_earnings": {
             "type": "number",
-            "description": "Total earnings"
+            "description": "Total earnings amount"
         },
         "created_at": {
             "type": "string",
