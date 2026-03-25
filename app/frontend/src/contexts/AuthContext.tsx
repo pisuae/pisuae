@@ -57,10 +57,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         setLoading(true);
       }
       setError(null);
+      // authApi.getCurrentUser() already waits for Lambda warm-up internally
       const userData = await authApi.getCurrentUser();
       if (mountedRef.current) {
         setUser(userData);
-        // Clear any pending retry on success
         if (retryTimeoutRef.current) {
           clearTimeout(retryTimeoutRef.current);
           retryTimeoutRef.current = null;
@@ -71,7 +71,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         const errorMessage =
           err instanceof Error ? err.message : 'An error occurred';
 
-        // Check if it's a network/DNS error
         const isNetworkError =
           errorMessage.includes('dns') ||
           errorMessage.includes('DNS') ||
@@ -82,13 +81,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           errorMessage.includes('balancer resolve');
 
         if (isNetworkError) {
-          // For network errors, set user to null but show a friendlier message
           setError(
             'Unable to connect to server. The app will retry automatically.'
           );
           setUser(null);
 
-          // Schedule an auto-retry for network errors
           if (!retryTimeoutRef.current) {
             retryTimeoutRef.current = setTimeout(() => {
               retryTimeoutRef.current = null;

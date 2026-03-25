@@ -1,15 +1,28 @@
 import axios, { AxiosInstance, AxiosError } from 'axios';
 import { getAPIBaseURL } from './config';
+import { lambdaWarmupPromise } from './config';
 
 // Retry configuration
-const MAX_RETRIES = 3;
-const INITIAL_RETRY_DELAY = 1000; // 1 second
+const MAX_RETRIES = 4;
+const INITIAL_RETRY_DELAY = 3000;
 
-/**
- * Sleep for a given number of milliseconds
- */
+const DNS_ERROR_KEYWORDS = [
+  'dns',
+  'balancer resolve',
+  'callback lock',
+  'timeout',
+  'failed to get from node cache',
+  'could not acquire',
+  'lambda-url',
+];
+
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function isDnsError(text: string): boolean {
+  const lower = text.toLowerCase();
+  return DNS_ERROR_KEYWORDS.some((kw) => lower.includes(kw));
 }
 
 /**
@@ -20,9 +33,22 @@ function isRetryableError(error: AxiosError): boolean {
   if (!error.response) {
     return true;
   }
-  // Server errors (5xx) are retryable
   const status = error.response.status;
-  return status >= 500 && status < 600;
+  if (status >= 500 && status < 600) {
+    // Also check if the 500 response body contains DNS error keywords
+    const data = error.response.data;
+    if (data && typeof data === 'object') {
+      const msg =
+        (data as Record<string, unknown>).message ||
+        (data as Record<string, unknown>).detail ||
+        '';
+      if (typeof msg === 'string' && isDnsError(msg)) {
+        return true;
+      }
+    }
+    return true;
+  }
+  return false;
 }
 
 class RPApi {
@@ -34,7 +60,7 @@ class RPApi {
       headers: {
         'Content-Type': 'application/json',
       },
-      timeout: 15000, // 15 second timeout
+      timeout: 15000,
     });
   }
 
@@ -43,12 +69,16 @@ class RPApi {
   }
 
   /**
-   * Execute a request with retry logic and exponential backoff
+   * Execute a request with retry logic.
+   * CRITICAL: Waits for Lambda warm-up before sending any request.
    */
   private async withRetry<T>(
     operation: () => Promise<T>,
     context: string
   ): Promise<T> {
+    // Wait for Lambda to be reachable (config.ts handles the warm-up)
+    await lambdaWarmupPromise;
+
     let lastError: Error | null = null;
 
     for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
@@ -63,7 +93,6 @@ class RPApi {
           throw error;
         }
 
-        // Don't retry after max attempts
         if (attempt >= MAX_RETRIES) {
           console.error(
             `[Auth] ${context}: All ${MAX_RETRIES + 1} attempts failed.`,
@@ -72,10 +101,9 @@ class RPApi {
           break;
         }
 
-        // Exponential backoff with jitter
         const delay =
           INITIAL_RETRY_DELAY * Math.pow(2, attempt) +
-          Math.random() * 500;
+          Math.random() * 1000;
         console.warn(
           `[Auth] ${context}: Attempt ${attempt + 1} failed (${axiosError.message}). Retrying in ${Math.round(delay)}ms...`
         );
@@ -99,13 +127,28 @@ class RPApi {
         return null;
       }
       // For DNS/network errors, return null instead of throwing
-      // This prevents the app from crashing on transient network issues
       if (!axiosError.response) {
         console.warn(
           '[Auth] Network error fetching user, treating as not authenticated:',
           axiosError.message
         );
         return null;
+      }
+      // For 500 errors with DNS messages, also return null gracefully
+      if (axiosError.response?.status && axiosError.response.status >= 500) {
+        const data = axiosError.response.data;
+        const msg =
+          data && typeof data === 'object'
+            ? (data as Record<string, unknown>).message ||
+              (data as Record<string, unknown>).detail ||
+              ''
+            : '';
+        if (typeof msg === 'string' && isDnsError(msg)) {
+          console.warn(
+            '[Auth] DNS/Lambda error fetching user, treating as not authenticated'
+          );
+          return null;
+        }
       }
       throw new Error(
         (axiosError.response?.data as { detail?: string })?.detail ||
@@ -120,8 +163,6 @@ class RPApi {
         () => this.client.get(`${this.getBaseURL()}/api/v1/auth/login`),
         'login'
       );
-      // The backend will redirect to OIDC provider
-      // SSO will work via cookies automatically
       window.location.href = response.data.redirect_url;
     } catch (error) {
       const axiosError = error as AxiosError;
@@ -138,7 +179,6 @@ class RPApi {
         () => this.client.get(`${this.getBaseURL()}/api/v1/auth/logout`),
         'logout'
       );
-      // The backend will redirect to OIDC provider logout
       window.location.href = response.data.redirect_url;
     } catch (error) {
       const axiosError = error as AxiosError;
