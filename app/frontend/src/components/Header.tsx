@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ShoppingCart, User, LogOut, Search, Cpu, Package, Store } from 'lucide-react';
+import { ShoppingCart, User, LogOut, Search, Cpu, Package, Store, Heart, Award } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -156,6 +156,14 @@ export default function Header({ cartCount = 0, onSearch }: HeaderProps) {
                 <DropdownMenuItem onClick={() => navigate('/orders')} className="hover:bg-slate-700 cursor-pointer">
                   <Package className="h-4 w-4 mr-2" />
                   My Orders
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => navigate('/saved-items')} className="hover:bg-slate-700 cursor-pointer">
+                  <Heart className="h-4 w-4 mr-2" />
+                  Saved Items
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => navigate('/credit-scores')} className="hover:bg-slate-700 cursor-pointer">
+                  <Award className="h-4 w-4 mr-2" />
+                  Credit Scores
                 </DropdownMenuItem>
                 {isVendor ? (
                   <DropdownMenuItem onClick={() => navigate('/vendor/dashboard')} className="hover:bg-slate-700 cursor-pointer">

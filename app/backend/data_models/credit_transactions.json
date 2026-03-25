@@ -1,0 +1,41 @@
+{
+    "title": "credit_transactions",
+    "type": "object",
+    "properties": {
+        "id": {
+            "type": "integer",
+            "description": "Primary key, auto-increment"
+        },
+        "user_id": {
+            "type": "string",
+            "description": "User ID"
+        },
+        "points": {
+            "type": "integer",
+            "description": "Points earned or redeemed (negative for redemption)"
+        },
+        "type": {
+            "type": "string",
+            "description": "Transaction type: earned, redeemed, bonus, referral"
+        },
+        "description": {
+            "type": "string",
+            "description": "Description of the transaction"
+        },
+        "reference_id": {
+            "type": "string",
+            "description": "Reference to order or action that triggered this"
+        },
+        "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Transaction timestamp"
+        }
+    },
+    "required": [
+        "id",
+        "user_id",
+        "points",
+        "type"
+    ]
+}

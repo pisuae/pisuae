@@ -16,6 +16,8 @@ import Profile from './pages/Profile';
 import AuthCallback from './pages/AuthCallback';
 import AuthError from './pages/AuthError';
 import PWAGuide from './pages/PWAGuide';
+import SavedItems from './pages/SavedItems';
+import CreditScores from './pages/CreditScores';
 import ChatBot from './components/ChatBot';
 
 const queryClient = new QueryClient();
@@ -37,6 +39,8 @@ const App = () => (
           <Route path="/vendor/dashboard" element={<VendorDashboard />} />
           <Route path="/vendor/analytics" element={<VendorAnalytics />} />
           <Route path="/profile" element={<Profile />} />
+          <Route path="/saved-items" element={<SavedItems />} />
+          <Route path="/credit-scores" element={<CreditScores />} />
           <Route path="/auth/callback" element={<AuthCallback />} />
           <Route path="/auth/error" element={<AuthError />} />
           <Route path="/pwa-guide" element={<PWAGuide />} />

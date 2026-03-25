@@ -1,0 +1,28 @@
+{
+    "title": "saved_items",
+    "type": "object",
+    "properties": {
+        "id": {
+            "type": "integer",
+            "description": "Primary key, auto-increment"
+        },
+        "user_id": {
+            "type": "string",
+            "description": "User ID"
+        },
+        "product_id": {
+            "type": "integer",
+            "description": "Product ID"
+        },
+        "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "When the item was saved"
+        }
+    },
+    "required": [
+        "id",
+        "user_id",
+        "product_id"
+    ]
+}

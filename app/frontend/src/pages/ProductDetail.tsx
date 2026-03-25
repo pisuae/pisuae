@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { ShoppingCart, ArrowLeft, Package, CheckCircle, Tag, Info, Star, Send, User } from 'lucide-react';
+import { ShoppingCart, ArrowLeft, Package, CheckCircle, Tag, Info, Star, Send, User, Heart } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
@@ -134,6 +134,11 @@ export default function ProductDetail() {
   const [cartCount, setCartCount] = useState(0);
   const [quantity, setQuantity] = useState(1);
 
+  // Saved/wishlist state
+  const [isSaved, setIsSaved] = useState(false);
+  const [savedItemId, setSavedItemId] = useState<number | null>(null);
+  const [savingItem, setSavingItem] = useState(false);
+
   // Reviews state
   const [reviews, setReviews] = useState<Review[]>([]);
   const [reviewsTotal, setReviewsTotal] = useState(0);
@@ -162,6 +167,9 @@ export default function ProductDetail() {
       checkAuth();
       await new Promise((r) => setTimeout(r, 500));
       if (cancelled) return;
+      checkSavedStatus();
+      await new Promise((r) => setTimeout(r, 400));
+      if (cancelled) return;
       loadReviews();
       await new Promise((r) => setTimeout(r, 500));
       if (cancelled) return;
@@ -181,6 +189,64 @@ export default function ProductDetail() {
       setIsLoggedIn(!!user?.data);
     } catch {
       setIsLoggedIn(false);
+    }
+  };
+
+  const checkSavedStatus = async () => {
+    if (!id) return;
+    try {
+      const user = await withRetry(() => client.auth.me());
+      if (!user?.data) return;
+      const res = await withRetry(() =>
+        client.entities.saved_items.query({ query: { product_id: Number(id) } })
+      );
+      const items = res?.data?.items || [];
+      if (items.length > 0) {
+        setIsSaved(true);
+        setSavedItemId(items[0].id);
+      }
+    } catch {
+      // Silently fail
+    }
+  };
+
+  const handleToggleSave = async () => {
+    setSavingItem(true);
+    try {
+      const user = await withRetry(() => client.auth.me());
+      if (!user?.data) {
+        toast.error('Please sign in to save items');
+        await client.auth.toLogin();
+        return;
+      }
+
+      if (isSaved && savedItemId) {
+        await withRetry(() =>
+          client.entities.saved_items.delete({ id: String(savedItemId) })
+        );
+        setIsSaved(false);
+        setSavedItemId(null);
+        toast.success('Removed from saved items');
+      } else {
+        const now = new Date().toISOString().replace('T', ' ').slice(0, 19);
+        const res = await withRetry(() =>
+          client.entities.saved_items.create({
+            data: {
+              product_id: Number(id),
+              created_at: now,
+            },
+          })
+        );
+        if (res?.data?.id) {
+          setIsSaved(true);
+          setSavedItemId(res.data.id);
+          toast.success('Saved to your wishlist!');
+        }
+      }
+    } catch {
+      toast.error('Failed to update saved items');
+    } finally {
+      setSavingItem(false);
     }
   };
 
@@ -444,7 +510,7 @@ export default function ProductDetail() {
             )}
 
             <div className="flex items-baseline gap-2">
-              <span className="text-4xl font-bold text-emerald-400">${product.price.toFixed(2)}</span>
+              <span className="text-4xl font-bold text-emerald-400">AED {product.price.toFixed(2)}</span>
             </div>
 
             <Separator className="bg-slate-800" />
@@ -499,15 +565,30 @@ export default function ProductDetail() {
                 </div>
               </div>
 
-              <Button
-                size="lg"
-                disabled={isOutOfStock || adding}
-                onClick={handleAddToCart}
-                className="w-full bg-blue-600 hover:bg-blue-500 text-white disabled:opacity-50 h-12 text-base"
-              >
-                <ShoppingCart className="h-5 w-5 mr-2" />
-                {adding ? 'Adding...' : isOutOfStock ? 'Out of Stock' : 'Add to Cart'}
-              </Button>
+              <div className="flex gap-3">
+                <Button
+                  size="lg"
+                  disabled={isOutOfStock || adding}
+                  onClick={handleAddToCart}
+                  className="flex-1 bg-blue-600 hover:bg-blue-500 text-white disabled:opacity-50 h-12 text-base"
+                >
+                  <ShoppingCart className="h-5 w-5 mr-2" />
+                  {adding ? 'Adding...' : isOutOfStock ? 'Out of Stock' : 'Add to Cart'}
+                </Button>
+                <Button
+                  size="lg"
+                  variant="outline"
+                  disabled={savingItem}
+                  onClick={handleToggleSave}
+                  className={`h-12 w-12 p-0 shrink-0 border-slate-700 ${
+                    isSaved
+                      ? 'bg-pink-500/15 border-pink-500/30 text-pink-400 hover:bg-pink-500/25 hover:text-pink-300'
+                      : 'text-slate-400 hover:text-pink-400 hover:bg-slate-800 hover:border-pink-500/30'
+                  }`}
+                >
+                  <Heart className={`h-5 w-5 ${isSaved ? 'fill-pink-400' : ''}`} />
+                </Button>
+              </div>
             </div>
           </div>
         </div>

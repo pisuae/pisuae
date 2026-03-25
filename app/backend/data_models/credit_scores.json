@@ -1,0 +1,49 @@
+{
+    "title": "credit_scores",
+    "type": "object",
+    "properties": {
+        "id": {
+            "type": "integer",
+            "description": "Primary key, auto-increment"
+        },
+        "user_id": {
+            "type": "string",
+            "description": "User ID"
+        },
+        "points": {
+            "type": "integer",
+            "description": "Current credit points balance"
+        },
+        "total_earned": {
+            "type": "integer",
+            "description": "Total points earned lifetime"
+        },
+        "total_redeemed": {
+            "type": "integer",
+            "description": "Total points redeemed lifetime"
+        },
+        "tier": {
+            "type": "string",
+            "description": "Loyalty tier: bronze, silver, gold, platinum"
+        },
+        "account_status": {
+            "type": "string",
+            "description": "Account status: active, deactivated, closed"
+        },
+        "last_activity": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Last activity timestamp"
+        },
+        "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Account creation timestamp"
+        }
+    },
+    "required": [
+        "id",
+        "user_id",
+        "points"
+    ]
+}
