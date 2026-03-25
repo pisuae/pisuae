@@ -3,8 +3,8 @@ import { getAPIBaseURL } from './config';
 import { lambdaWarmupPromise } from './config';
 
 // Retry configuration
-const MAX_RETRIES = 4;
-const INITIAL_RETRY_DELAY = 3000;
+const MAX_RETRIES = 5;
+const INITIAL_RETRY_DELAY = 3500;
 
 const DNS_ERROR_KEYWORDS = [
   'dns',
@@ -60,7 +60,7 @@ class RPApi {
       headers: {
         'Content-Type': 'application/json',
       },
-      timeout: 15000,
+      timeout: 30000,
     });
   }
 
@@ -101,9 +101,11 @@ class RPApi {
           break;
         }
 
-        const delay =
+        const delay = Math.min(
           INITIAL_RETRY_DELAY * Math.pow(2, attempt) +
-          Math.random() * 1000;
+          Math.random() * 1000,
+          30000
+        );
         console.warn(
           `[Auth] ${context}: Attempt ${attempt + 1} failed (${axiosError.message}). Retrying in ${Math.round(delay)}ms...`
         );

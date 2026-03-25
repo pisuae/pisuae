@@ -119,8 +119,9 @@ function isRetryableResponse(response: unknown): boolean {
  * Global request queue.
  * - Waits for Lambda warm-up (from config.ts) before processing any request.
  * - During cold start: concurrency = 1 (fully serialized)
- * - After warm-up: concurrency = 3
- * - Adds a small delay between requests during cold start to avoid DNS contention.
+ * - After warm-up stabilizes: concurrency = 4
+ * - Adds delay between requests during cold start to avoid DNS contention.
+ * - Tracks consecutive successes to determine when DNS is fully stable.
  */
 class RequestQueue {
   private queue: Array<{
@@ -129,9 +130,32 @@ class RequestQueue {
     reject: (error: unknown) => void;
   }> = [];
   private running = 0;
+  private consecutiveSuccesses = 0;
+  private dnsStable = false;
 
   private get maxConcurrent(): number {
-    return isLambdaReady() ? 3 : 1;
+    if (!isLambdaReady()) return 1;
+    // After warm-up, start with concurrency 2 until DNS is proven stable
+    if (!this.dnsStable) return 2;
+    return 4;
+  }
+
+  private markSuccess() {
+    this.consecutiveSuccesses++;
+    // After 3 consecutive successes, consider DNS fully stable
+    if (this.consecutiveSuccesses >= 3 && !this.dnsStable) {
+      this.dnsStable = true;
+      console.log('[RequestQueue] DNS is stable, increasing concurrency.');
+    }
+  }
+
+  private markFailure() {
+    this.consecutiveSuccesses = 0;
+    // If we see a failure after being stable, reset stability
+    if (this.dnsStable) {
+      this.dnsStable = false;
+      console.warn('[RequestQueue] DNS failure detected, reducing concurrency.');
+    }
   }
 
   async enqueue<T>(fn: () => Promise<T>): Promise<T> {
@@ -159,13 +183,20 @@ class RequestQueue {
     this.running++;
     try {
       const result = await item.fn();
+      // Check if the result is a retryable error response (DNS error returned as 500)
+      if (isRetryableResponse(result)) {
+        this.markFailure();
+      } else {
+        this.markSuccess();
+      }
       item.resolve(result);
     } catch (error) {
+      this.markFailure();
       item.reject(error);
     } finally {
       this.running--;
-      // Small delay between requests to avoid DNS contention
-      const cooldown = isLambdaReady() ? 50 : 500;
+      // Longer cooldown when DNS is not yet stable
+      const cooldown = this.dnsStable ? 30 : isLambdaReady() ? 200 : 800;
       if (this.queue.length > 0) {
         setTimeout(() => this.processNext(), cooldown);
       }
@@ -181,8 +212,8 @@ const globalQueue = new RequestQueue();
  */
 export async function withRetry<T>(
   fn: () => Promise<T>,
-  maxRetries: number = 5,
-  baseDelayMs: number = 3000
+  maxRetries: number = 6,
+  baseDelayMs: number = 3500
 ): Promise<T> {
   let lastError: unknown;
   let lastResult: T | undefined;
@@ -195,8 +226,10 @@ export async function withRetry<T>(
       if (isRetryableResponse(result)) {
         lastResult = result;
         if (attempt < maxRetries) {
-          const delay =
-            baseDelayMs * Math.pow(2, attempt) + Math.random() * 1500;
+          const delay = Math.min(
+            baseDelayMs * Math.pow(2, attempt) + Math.random() * 1500,
+            30000
+          );
           console.warn(
             `[Retry] Attempt ${attempt + 1}/${maxRetries}: retryable response. Retrying in ${Math.round(delay)}ms...`
           );
@@ -211,8 +244,10 @@ export async function withRetry<T>(
       lastError = error;
 
       if (attempt < maxRetries && isRetryableError(error)) {
-        const delay =
-          baseDelayMs * Math.pow(2, attempt) + Math.random() * 1500;
+        const delay = Math.min(
+          baseDelayMs * Math.pow(2, attempt) + Math.random() * 1500,
+          30000
+        );
         console.warn(
           `[Retry] Attempt ${attempt + 1}/${maxRetries} failed. Retrying in ${Math.round(delay)}ms...`,
           error instanceof Error ? error.message : error

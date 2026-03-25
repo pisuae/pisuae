@@ -70,21 +70,23 @@ function markLambdaReady(): void {
  * This is the FIRST request the app makes, so it must be very patient.
  *
  * Strategy:
- * - 7 attempts total (1 initial + 6 retries)
- * - Base delay 3s with exponential backoff (3s, 6s, 12s, 24s, 48s, 96s)
+ * - 9 attempts total (1 initial + 8 retries)
+ * - Base delay 4s with exponential backoff, capped at 30s per wait
+ * - 30s fetch timeout per attempt (Lambda cold starts can take 20+ seconds)
  * - Also checks response body for DNS error messages (Lambda returns 500 with DNS error)
+ * - After first success, sends a confirmation ping to ensure DNS is fully resolved
  */
 async function fetchWithRetry(
   url: string,
-  maxRetries: number = 6,
-  initialDelay: number = 3000
+  maxRetries: number = 8,
+  initialDelay: number = 4000
 ): Promise<Response> {
   let lastError: Error | null = null;
 
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 15000); // 15s timeout
+      const timeoutId = setTimeout(() => controller.abort(), 30000); // 30s timeout for cold starts
 
       const response = await fetch(url, { signal: controller.signal });
       clearTimeout(timeoutId);
@@ -97,9 +99,10 @@ async function fetchWithRetry(
           if (isDnsError(body)) {
             // This is a DNS/cold-start error returned as a 500 response
             if (attempt < maxRetries) {
-              const delay =
-                initialDelay * Math.pow(2, attempt) +
-                Math.random() * 2000;
+              const delay = Math.min(
+                initialDelay * Math.pow(2, attempt) + Math.random() * 2000,
+                30000
+              );
               console.warn(
                 `[Config] Attempt ${attempt + 1}/${maxRetries + 1}: Lambda DNS error (500). Retrying in ${Math.round(delay)}ms...`
               );
@@ -114,6 +117,17 @@ async function fetchWithRetry(
 
       // Any successful response (even non-200) means Lambda is reachable
       if (response.ok || response.status < 500) {
+        // Send a confirmation ping after a short delay to ensure DNS is fully cached
+        // This prevents the "first real request after warm-up" from failing
+        try {
+          await sleep(500);
+          const pingController = new AbortController();
+          const pingTimeout = setTimeout(() => pingController.abort(), 10000);
+          await fetch(url, { signal: pingController.signal });
+          clearTimeout(pingTimeout);
+        } catch {
+          // Confirmation ping failed, but primary succeeded - still mark ready
+        }
         markLambdaReady();
       }
 
@@ -125,8 +139,10 @@ async function fetchWithRetry(
         break;
       }
 
-      const delay =
-        initialDelay * Math.pow(2, attempt) + Math.random() * 2000;
+      const delay = Math.min(
+        initialDelay * Math.pow(2, attempt) + Math.random() * 2000,
+        30000
+      );
       console.warn(
         `[Config] Attempt ${attempt + 1}/${maxRetries + 1} failed (${lastError.message}). Retrying in ${Math.round(delay)}ms...`
       );

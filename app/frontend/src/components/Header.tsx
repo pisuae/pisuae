@@ -35,7 +35,7 @@ export default function Header({ cartCount = 0, onSearch }: HeaderProps) {
         if (res?.data) {
           setUser(res.data);
           // Stagger the vendor check to avoid simultaneous Lambda cold-start DNS issues
-          await new Promise((r) => setTimeout(r, 300));
+          await new Promise((r) => setTimeout(r, 600));
           if (cancelled) return;
           // Use quiet retry for vendor check - it's non-critical UI state
           const vendorRes = await withRetryQuiet(
