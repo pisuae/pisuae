@@ -9,7 +9,6 @@ class Vendors(Base):
     id = Column(Integer, primary_key=True, index=True, autoincrement=True, nullable=False)
     user_id = Column(String, nullable=False)
     business_name = Column(String, nullable=False)
-    business_type = Column(String, nullable=True)
     email = Column(String, nullable=True)
     mobile_number = Column(String, nullable=True)
     bank_name = Column(String, nullable=True)

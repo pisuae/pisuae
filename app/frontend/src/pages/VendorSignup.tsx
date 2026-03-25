@@ -136,10 +136,12 @@ export default function VendorSignup() {
 
     setSubmitting(true);
     try {
+      const fullDescription = businessType
+        ? `[${businessType}] ${description.trim()}`
+        : description.trim();
       await client.entities.vendors.create({
         data: {
           business_name: businessName.trim(),
-          business_type: businessType,
           email: email.trim(),
           mobile_number: mobileNumber.trim(),
           bank_name: bankName.trim(),
@@ -147,7 +149,7 @@ export default function VendorSignup() {
           bank_account_number: accountNumber.trim(),
           bank_iban: iban.trim(),
           bank_verified: 'pending',
-          description: description.trim(),
+          description: fullDescription,
           commission_rate: PLATFORM_COMMISSION,
           status: 'pending_verification',
           total_sales: 0,

@@ -23,7 +23,6 @@ router = APIRouter(prefix="/api/v1/entities/vendors", tags=["vendors"])
 class VendorsData(BaseModel):
     """Entity data schema (for create/update)"""
     business_name: str
-    business_type: str = None
     email: str = None
     mobile_number: str = None
     bank_name: str = None
@@ -42,7 +41,6 @@ class VendorsData(BaseModel):
 class VendorsUpdateData(BaseModel):
     """Update entity data (partial updates allowed)"""
     business_name: Optional[str] = None
-    business_type: Optional[str] = None
     email: Optional[str] = None
     mobile_number: Optional[str] = None
     bank_name: Optional[str] = None
@@ -63,7 +61,6 @@ class VendorsResponse(BaseModel):
     id: int
     user_id: str
     business_name: str
-    business_type: Optional[str] = None
     email: Optional[str] = None
     mobile_number: Optional[str] = None
     bank_name: Optional[str] = None
