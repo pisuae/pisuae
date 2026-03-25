@@ -16,11 +16,19 @@
         },
         "email": {
             "type": "string",
-            "description": "Business email"
+            "description": "Vendor email"
         },
         "mobile_number": {
             "type": "string",
-            "description": "Mobile number"
+            "description": "Vendor mobile number"
+        },
+        "stripe_account_id": {
+            "type": "string",
+            "description": "Stripe Connect account ID"
+        },
+        "stripe_onboarding_complete": {
+            "type": "string",
+            "description": "Whether Stripe onboarding is complete (yes/no)"
         },
         "bank_name": {
             "type": "string",
@@ -28,7 +36,7 @@
         },
         "bank_account_holder": {
             "type": "string",
-            "description": "Bank account holder name"
+            "description": "Account holder name"
         },
         "bank_account_number": {
             "type": "string",
@@ -36,7 +44,7 @@
         },
         "bank_iban": {
             "type": "string",
-            "description": "Bank IBAN"
+            "description": "IBAN number"
         },
         "bank_verified": {
             "type": "string",
@@ -48,7 +56,7 @@
         },
         "commission_rate": {
             "type": "number",
-            "description": "Commission rate"
+            "description": "Platform commission rate"
         },
         "status": {
             "type": "string",
@@ -65,7 +73,7 @@
         "created_at": {
             "type": "string",
             "format": "date-time",
-            "description": "Creation timestamp"
+            "description": "Created timestamp"
         }
     },
     "required": [

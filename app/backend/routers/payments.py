@@ -1,10 +1,13 @@
+"""Payment processing with Stripe Connect split payments (85% vendor / 15% platform)."""
 import logging
+import os
 from datetime import datetime
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
+import stripe
 
 from core.database import get_db
 from dependencies.auth import get_current_user
@@ -12,11 +15,15 @@ from schemas.auth import UserResponse
 from services.orders import OrdersService
 from services.cart_items import Cart_itemsService as CartItemsService
 from services.products import ProductsService
-from services.payment import PaymentService, CheckoutSessionRequest, CheckoutError
+from services.vendors import VendorsService
 
 logger = logging.getLogger(__name__)
 
+stripe.api_key = os.environ.get("STRIPE_SECRET_KEY")
+
 router = APIRouter(prefix="/api/v1/payment", tags=["payment"])
+
+PLATFORM_COMMISSION_PERCENT = 15  # Platform keeps 15%, vendor gets 85%
 
 
 # ---------- Request/Response Schemas ----------
@@ -63,6 +70,17 @@ class VerifyPaymentResponse(BaseModel):
     order_ids: List[int]
 
 
+def _get_frontend_host(request: Request) -> str:
+    """Extract frontend host from request headers."""
+    frontend_host = request.headers.get("App-Host")
+    if frontend_host and not frontend_host.startswith(("http://", "https://")):
+        frontend_host = f"https://{frontend_host}"
+    if not frontend_host:
+        origin = request.headers.get("Origin") or request.headers.get("Referer", "").rstrip("/")
+        frontend_host = origin or ""
+    return frontend_host
+
+
 # ---------- Routes ----------
 @router.post("/checkout/cod", response_model=CODCheckoutResponse)
 async def checkout_cod(
@@ -79,17 +97,16 @@ async def checkout_cod(
         order_ids = []
 
         for item in data.items:
-            # Get product details to calculate price
             product = await products_service.get_by_id(item.product_id)
             if not product:
                 raise HTTPException(status_code=404, detail=f"Product {item.product_id} not found")
 
             total_price = product.price * item.quantity
 
-            # Create order with COD payment method
             order = await orders_service.create(
                 {
                     "product_id": item.product_id,
+                    "seller_id": product.seller_id or "",
                     "quantity": item.quantity,
                     "total_price": total_price,
                     "status": "confirmed",
@@ -103,7 +120,6 @@ async def checkout_cod(
             if order:
                 order_ids.append(order.id)
 
-            # Remove cart item
             try:
                 await cart_service.delete(item.cart_item_id, user_id=user_id)
             except Exception:
@@ -127,22 +143,20 @@ async def checkout_stripe(
     current_user: UserResponse = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Place order with Stripe online payment"""
+    """Place order with Stripe payment - splits 85% to vendor, 15% to platform."""
     try:
         user_id = str(current_user.id)
         orders_service = OrdersService(db)
         products_service = ProductsService(db)
         cart_service = CartItemsService(db)
-        payment_service = PaymentService()
+        vendors_service = VendorsService(db)
         order_ids = []
+        line_items = []
         total_amount = 0.0
 
         # Get frontend host for redirect URLs
-        frontend_host = request.headers.get("App-Host")
-        if frontend_host and not frontend_host.startswith(("http://", "https://")):
-            frontend_host = f"https://{frontend_host}"
+        frontend_host = _get_frontend_host(request)
 
-        # Use frontend-provided URLs as primary, fall back to App-Host header
         if data.success_url and data.cancel_url:
             final_success_url = data.success_url
             final_cancel_url = data.cancel_url
@@ -150,20 +164,17 @@ async def checkout_stripe(
             final_success_url = f"{frontend_host}/payment-success?session_id={{CHECKOUT_SESSION_ID}}"
             final_cancel_url = f"{frontend_host}/cart"
         else:
-            # Last resort: use Referer or Origin header
-            origin = request.headers.get("Origin") or request.headers.get("Referer", "").rstrip("/")
-            if origin:
-                final_success_url = f"{origin}/payment-success?session_id={{CHECKOUT_SESSION_ID}}"
-                final_cancel_url = f"{origin}/cart"
-            else:
-                raise HTTPException(
-                    status_code=400,
-                    detail="Cannot determine redirect URLs. Please provide success_url and cancel_url."
-                )
+            raise HTTPException(
+                status_code=400,
+                detail="Cannot determine redirect URLs. Please provide success_url and cancel_url.",
+            )
 
         logger.info(f"Stripe checkout URLs - success: {final_success_url}, cancel: {final_cancel_url}")
 
-        # Create orders for each item
+        # Collect vendor stripe account IDs for payment splitting
+        vendor_stripe_account = None
+        vendor_total = 0.0
+
         for item in data.items:
             product = await products_service.get_by_id(item.product_id)
             if not product:
@@ -172,9 +183,22 @@ async def checkout_stripe(
             item_total = product.price * item.quantity
             total_amount += item_total
 
+            # Try to find vendor's Stripe Connect account via seller_id
+            if product.seller_id:
+                vendor_list = await vendors_service.get_list(
+                    user_id=product.seller_id, limit=1
+                )
+                if vendor_list["total"] > 0:
+                    v = vendor_list["items"][0]
+                    if v.stripe_account_id and v.stripe_onboarding_complete == "yes":
+                        vendor_stripe_account = v.stripe_account_id
+                        vendor_total += item_total
+
+            # Create order
             order = await orders_service.create(
                 {
                     "product_id": item.product_id,
+                    "seller_id": product.seller_id or "",
                     "quantity": item.quantity,
                     "total_price": item_total,
                     "status": "pending",
@@ -188,38 +212,60 @@ async def checkout_stripe(
             if order:
                 order_ids.append(order.id)
 
+            # Build line items for Stripe
+            line_items.append({
+                "price_data": {
+                    "currency": "usd",
+                    "product_data": {
+                        "name": product.title[:200],
+                    },
+                    "unit_amount": int(product.price * 100),  # Stripe uses cents
+                },
+                "quantity": item.quantity,
+            })
+
         if not order_ids:
             raise HTTPException(status_code=400, detail="No orders were created")
 
-        # Use the determined URLs for Stripe checkout
-        success_url = final_success_url
-        cancel_url = final_cancel_url
-
-        checkout_request = CheckoutSessionRequest(
-            amount=round(total_amount, 2),
-            currency="usd",
-            quantity=1,
-            mode="payment",
-            ui_mode="hosted",
-            success_url=success_url,
-            cancel_url=cancel_url,
-            metadata={
+        # Build Stripe checkout session params
+        session_params = {
+            "payment_method_types": ["card"],
+            "line_items": line_items,
+            "mode": "payment",
+            "success_url": final_success_url,
+            "cancel_url": final_cancel_url,
+            "metadata": {
                 "order_ids": ",".join(str(oid) for oid in order_ids),
                 "user_id": user_id,
             },
-        )
+        }
 
-        session_response = await payment_service.create_checkout_session(checkout_request)
+        # If vendor has Stripe Connect, use payment_intent_data for split
+        if vendor_stripe_account and vendor_total > 0:
+            # Vendor gets 85%, platform keeps 15%
+            platform_fee = int(vendor_total * 100 * PLATFORM_COMMISSION_PERCENT / 100)
+            session_params["payment_intent_data"] = {
+                "application_fee_amount": platform_fee,
+                "transfer_data": {
+                    "destination": vendor_stripe_account,
+                },
+            }
+            logger.info(
+                f"Stripe Connect split: total={total_amount}, "
+                f"platform_fee={platform_fee/100}, vendor_account={vendor_stripe_account}"
+            )
+
+        session = stripe.checkout.Session.create(**session_params)
 
         # Update orders with stripe session ID
         for oid in order_ids:
             await orders_service.update(
                 oid,
-                {"stripe_session_id": session_response.session_id},
+                {"stripe_session_id": session.id},
                 user_id=user_id,
             )
 
-        # Remove cart items after successful session creation
+        # Remove cart items
         for item in data.items:
             try:
                 await cart_service.delete(item.cart_item_id, user_id=user_id)
@@ -227,13 +273,13 @@ async def checkout_stripe(
                 logger.warning(f"Failed to delete cart item {item.cart_item_id}")
 
         return StripeCheckoutResponse(
-            session_id=session_response.session_id,
-            url=session_response.url,
+            session_id=session.id,
+            url=session.url,
             order_ids=order_ids,
         )
     except HTTPException:
         raise
-    except CheckoutError as e:
+    except stripe.error.StripeError as e:
         logger.error(f"Stripe checkout error: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Payment session creation failed: {str(e)}")
     except Exception as e:
@@ -247,25 +293,21 @@ async def verify_payment(
     current_user: UserResponse = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Verify Stripe payment status and update orders"""
+    """Verify Stripe payment status and update orders."""
     try:
         user_id = str(current_user.id)
-        payment_service = PaymentService()
         orders_service = OrdersService(db)
 
-        # Get checkout session status
-        status_response = await payment_service.get_checkout_status(data.session_id)
+        session = stripe.checkout.Session.retrieve(data.session_id)
 
-        # Map Stripe status to order status
         status_mapping = {
             "complete": "paid",
             "open": "pending",
             "expired": "cancelled",
         }
-        order_status = status_mapping.get(status_response.status, "pending")
+        order_status = status_mapping.get(session.status, "pending")
 
-        # Get order IDs from metadata
-        order_ids_str = status_response.metadata.get("order_ids", "")
+        order_ids_str = session.metadata.get("order_ids", "")
         order_ids = [int(oid) for oid in order_ids_str.split(",") if oid.strip()]
 
         # Update all orders with the payment status
@@ -276,12 +318,33 @@ async def verify_payment(
                 user_id=user_id,
             )
 
+        # If payment is complete, update vendor earnings
+        if order_status == "paid":
+            vendors_service = VendorsService(db)
+            for oid in order_ids:
+                order = await orders_service.get_by_id(oid, user_id=user_id)
+                if order and order.seller_id:
+                    vendor_list = await vendors_service.get_list(
+                        user_id=order.seller_id, limit=1
+                    )
+                    if vendor_list["total"] > 0:
+                        vendor = vendor_list["items"][0]
+                        vendor_earning = order.total_price * (100 - PLATFORM_COMMISSION_PERCENT) / 100
+                        await vendors_service.update(
+                            vendor.id,
+                            {
+                                "total_sales": (vendor.total_sales or 0) + order.total_price,
+                                "total_earnings": (vendor.total_earnings or 0) + vendor_earning,
+                            },
+                            user_id=order.seller_id,
+                        )
+
         return VerifyPaymentResponse(
             status=order_status,
-            payment_status=status_response.payment_status,
+            payment_status=session.payment_status,
             order_ids=order_ids,
         )
-    except CheckoutError as e:
+    except stripe.error.StripeError as e:
         logger.error(f"Payment verification error: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Payment verification failed: {str(e)}")
     except Exception as e:

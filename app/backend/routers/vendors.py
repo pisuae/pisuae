@@ -25,6 +25,8 @@ class VendorsData(BaseModel):
     business_name: str
     email: str = None
     mobile_number: str = None
+    stripe_account_id: str = None
+    stripe_onboarding_complete: str = None
     bank_name: str = None
     bank_account_holder: str = None
     bank_account_number: str = None
@@ -43,6 +45,8 @@ class VendorsUpdateData(BaseModel):
     business_name: Optional[str] = None
     email: Optional[str] = None
     mobile_number: Optional[str] = None
+    stripe_account_id: Optional[str] = None
+    stripe_onboarding_complete: Optional[str] = None
     bank_name: Optional[str] = None
     bank_account_holder: Optional[str] = None
     bank_account_number: Optional[str] = None
@@ -63,6 +67,8 @@ class VendorsResponse(BaseModel):
     business_name: str
     email: Optional[str] = None
     mobile_number: Optional[str] = None
+    stripe_account_id: Optional[str] = None
+    stripe_onboarding_complete: Optional[str] = None
     bank_name: Optional[str] = None
     bank_account_holder: Optional[str] = None
     bank_account_number: Optional[str] = None

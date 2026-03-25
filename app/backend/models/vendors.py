@@ -11,6 +11,8 @@ class Vendors(Base):
     business_name = Column(String, nullable=False)
     email = Column(String, nullable=True)
     mobile_number = Column(String, nullable=True)
+    stripe_account_id = Column(String, nullable=True)
+    stripe_onboarding_complete = Column(String, nullable=True)
     bank_name = Column(String, nullable=True)
     bank_account_holder = Column(String, nullable=True)
     bank_account_number = Column(String, nullable=True)
