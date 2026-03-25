@@ -8,23 +8,55 @@
         },
         "user_id": {
             "type": "string",
-            "description": "User ID from auth"
+            "description": "User ID"
         },
         "business_name": {
             "type": "string",
-            "description": "Vendor business name"
+            "description": "Business name"
+        },
+        "business_type": {
+            "type": "string",
+            "description": "Type of business"
+        },
+        "email": {
+            "type": "string",
+            "description": "Valid email address"
+        },
+        "mobile_number": {
+            "type": "string",
+            "description": "Mobile number"
+        },
+        "bank_name": {
+            "type": "string",
+            "description": "Bank name"
+        },
+        "bank_account_holder": {
+            "type": "string",
+            "description": "Bank account holder name"
+        },
+        "bank_account_number": {
+            "type": "string",
+            "description": "Bank account number"
+        },
+        "bank_iban": {
+            "type": "string",
+            "description": "Bank IBAN number"
+        },
+        "bank_verified": {
+            "type": "string",
+            "description": "Bank verification status"
         },
         "description": {
             "type": "string",
-            "description": "Vendor business description"
+            "description": "Business description"
         },
         "commission_rate": {
             "type": "number",
-            "description": "Platform commission percentage, e.g. 15.0 means 15%"
+            "description": "Commission rate"
         },
         "status": {
             "type": "string",
-            "description": "Vendor status: pending, active, suspended"
+            "description": "Vendor status"
         },
         "total_sales": {
             "type": "number",
@@ -32,19 +64,17 @@
         },
         "total_earnings": {
             "type": "number",
-            "description": "Total earnings after commission"
+            "description": "Total earnings amount"
         },
         "created_at": {
             "type": "string",
             "format": "date-time",
-            "description": "Account creation date"
+            "description": "Creation timestamp"
         }
     },
     "required": [
         "id",
         "user_id",
-        "business_name",
-        "commission_rate",
-        "status"
+        "business_name"
     ]
 }

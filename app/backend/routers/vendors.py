@@ -23,9 +23,17 @@ router = APIRouter(prefix="/api/v1/entities/vendors", tags=["vendors"])
 class VendorsData(BaseModel):
     """Entity data schema (for create/update)"""
     business_name: str
+    business_type: str = None
+    email: str = None
+    mobile_number: str = None
+    bank_name: str = None
+    bank_account_holder: str = None
+    bank_account_number: str = None
+    bank_iban: str = None
+    bank_verified: str = None
     description: str = None
-    commission_rate: float
-    status: str
+    commission_rate: float = None
+    status: str = None
     total_sales: float = None
     total_earnings: float = None
     created_at: Optional[datetime] = None
@@ -34,6 +42,14 @@ class VendorsData(BaseModel):
 class VendorsUpdateData(BaseModel):
     """Update entity data (partial updates allowed)"""
     business_name: Optional[str] = None
+    business_type: Optional[str] = None
+    email: Optional[str] = None
+    mobile_number: Optional[str] = None
+    bank_name: Optional[str] = None
+    bank_account_holder: Optional[str] = None
+    bank_account_number: Optional[str] = None
+    bank_iban: Optional[str] = None
+    bank_verified: Optional[str] = None
     description: Optional[str] = None
     commission_rate: Optional[float] = None
     status: Optional[str] = None
@@ -47,9 +63,17 @@ class VendorsResponse(BaseModel):
     id: int
     user_id: str
     business_name: str
+    business_type: Optional[str] = None
+    email: Optional[str] = None
+    mobile_number: Optional[str] = None
+    bank_name: Optional[str] = None
+    bank_account_holder: Optional[str] = None
+    bank_account_number: Optional[str] = None
+    bank_iban: Optional[str] = None
+    bank_verified: Optional[str] = None
     description: Optional[str] = None
-    commission_rate: float
-    status: str
+    commission_rate: Optional[float] = None
+    status: Optional[str] = None
     total_sales: Optional[float] = None
     total_earnings: Optional[float] = None
     created_at: Optional[datetime] = None
