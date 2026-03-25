@@ -20,7 +20,7 @@
         },
         "email": {
             "type": "string",
-            "description": "Valid email address"
+            "description": "Valid email"
         },
         "mobile_number": {
             "type": "string",
@@ -40,7 +40,7 @@
         },
         "bank_iban": {
             "type": "string",
-            "description": "Bank IBAN number"
+            "description": "Bank IBAN"
         },
         "bank_verified": {
             "type": "string",
@@ -48,7 +48,7 @@
         },
         "description": {
             "type": "string",
-            "description": "Business description"
+            "description": "Vendor description"
         },
         "commission_rate": {
             "type": "number",
@@ -64,7 +64,7 @@
         },
         "total_earnings": {
             "type": "number",
-            "description": "Total earnings amount"
+            "description": "Total earnings"
         },
         "created_at": {
             "type": "string",
