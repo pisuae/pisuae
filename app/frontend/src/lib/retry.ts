@@ -213,7 +213,7 @@ const globalQueue = new RequestQueue();
 export async function withRetry<T>(
   fn: () => Promise<T>,
   maxRetries: number = 6,
-  baseDelayMs: number = 3500
+  baseDelayMs: number = 3000
 ): Promise<T> {
   let lastError: unknown;
   let lastResult: T | undefined;

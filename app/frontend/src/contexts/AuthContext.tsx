@@ -41,8 +41,8 @@ interface AuthProviderProps {
   children: ReactNode;
 }
 
-// Auto-retry delay for background auth checks (30 seconds)
-const AUTO_RETRY_DELAY = 30000;
+// Auto-retry delay for background auth checks (15 seconds for faster recovery)
+const AUTO_RETRY_DELAY = 15000;
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);

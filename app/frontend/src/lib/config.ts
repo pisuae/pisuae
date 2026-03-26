@@ -70,23 +70,23 @@ function markLambdaReady(): void {
  * This is the FIRST request the app makes, so it must be very patient.
  *
  * Strategy:
- * - 9 attempts total (1 initial + 8 retries)
- * - Base delay 4s with exponential backoff, capped at 30s per wait
- * - 30s fetch timeout per attempt (Lambda cold starts can take 20+ seconds)
+ * - 12 attempts total (1 initial + 11 retries)
+ * - Base delay 3s with exponential backoff, capped at 30s per wait
+ * - 35s fetch timeout per attempt (Lambda cold starts can take 20+ seconds)
  * - Also checks response body for DNS error messages (Lambda returns 500 with DNS error)
- * - After first success, sends a confirmation ping to ensure DNS is fully resolved
+ * - After first success, sends 2 confirmation pings to ensure DNS is fully resolved
  */
 async function fetchWithRetry(
   url: string,
-  maxRetries: number = 8,
-  initialDelay: number = 4000
+  maxRetries: number = 11,
+  initialDelay: number = 3000
 ): Promise<Response> {
   let lastError: Error | null = null;
 
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 30000); // 30s timeout for cold starts
+      const timeoutId = setTimeout(() => controller.abort(), 35000); // 35s timeout for cold starts
 
       const response = await fetch(url, { signal: controller.signal });
       clearTimeout(timeoutId);
@@ -117,16 +117,18 @@ async function fetchWithRetry(
 
       // Any successful response (even non-200) means Lambda is reachable
       if (response.ok || response.status < 500) {
-        // Send a confirmation ping after a short delay to ensure DNS is fully cached
+        // Send 2 confirmation pings after short delays to ensure DNS is fully cached
         // This prevents the "first real request after warm-up" from failing
-        try {
-          await sleep(500);
-          const pingController = new AbortController();
-          const pingTimeout = setTimeout(() => pingController.abort(), 10000);
-          await fetch(url, { signal: pingController.signal });
-          clearTimeout(pingTimeout);
-        } catch {
-          // Confirmation ping failed, but primary succeeded - still mark ready
+        for (let ping = 0; ping < 2; ping++) {
+          try {
+            await sleep(600);
+            const pingController = new AbortController();
+            const pingTimeout = setTimeout(() => pingController.abort(), 12000);
+            await fetch(url, { signal: pingController.signal });
+            clearTimeout(pingTimeout);
+          } catch {
+            // Confirmation ping failed, but primary succeeded - continue
+          }
         }
         markLambdaReady();
       }

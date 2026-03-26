@@ -13,6 +13,7 @@ import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import Header from '@/components/Header';
 import { client } from '@/lib/api';
+import { resilientAuth, resilientQuery, resilientInvoke } from '@/lib/resilient-client';
 
 const PLATFORM_COMMISSION = 15;
 
@@ -72,10 +73,10 @@ export default function VendorSignup() {
 
   const checkAuthAndVendor = async () => {
     try {
-      const res = await client.auth.me();
-      if (res?.data) {
-        setUser(res.data);
-        const vendorRes = await client.entities.vendors.query({ query: {} });
+      const userData = await resilientAuth();
+      if (userData) {
+        setUser(userData);
+        const vendorRes = await resilientQuery('vendors', { query: {} });
         const vendors = vendorRes?.data?.items || [];
         if (vendors.length > 0) {
           setExistingVendor(vendors[0]);
@@ -95,7 +96,7 @@ export default function VendorSignup() {
   const checkStripeStatus = async () => {
     setCheckingStatus(true);
     try {
-      const res = await client.apiCall.invoke({
+      const res = await resilientInvoke({
         url: '/api/v1/stripe-connect/status',
         method: 'GET',
       });
@@ -151,7 +152,7 @@ export default function VendorSignup() {
 
     setSubmitting(true);
     try {
-      const res = await client.apiCall.invoke({
+      const res = await resilientInvoke({
         url: '/api/v1/stripe-connect/create-account',
         method: 'POST',
         data: {
@@ -183,7 +184,7 @@ export default function VendorSignup() {
     if (!existingVendor) return;
     setSubmitting(true);
     try {
-      const res = await client.apiCall.invoke({
+      const res = await resilientInvoke({
         url: '/api/v1/stripe-connect/onboarding-link',
         method: 'POST',
         data: { vendor_id: existingVendor.id },

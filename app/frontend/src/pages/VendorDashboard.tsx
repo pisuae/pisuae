@@ -17,6 +17,7 @@ import { toast } from 'sonner';
 import Header from '@/components/Header';
 import { client } from '@/lib/api';
 import { resolveImageUrl, uploadProductImage } from '@/lib/image';
+import { resilientAuth, resilientQuery } from '@/lib/resilient-client';
 
 interface Product {
   id: number;
@@ -86,14 +87,14 @@ export default function VendorDashboard() {
 
   const loadData = async () => {
     try {
-      const res = await client.auth.me();
-      if (!res?.data) {
+      const userData = await resilientAuth();
+      if (!userData) {
         navigate('/vendor/signup');
         return;
       }
-      setUser(res.data);
+      setUser(userData);
 
-      const vendorRes = await client.entities.vendors.query({ query: {} });
+      const vendorRes = await resilientQuery('vendors', { query: {} });
       const vendors = vendorRes?.data?.items || [];
       if (vendors.length === 0) {
         navigate('/vendor/signup');
@@ -101,8 +102,8 @@ export default function VendorDashboard() {
       }
       setVendor(vendors[0]);
 
-      const prodRes = await client.entities.products.query({
-        query: { seller_id: res.data.id },
+      const prodRes = await resilientQuery('products', {
+        query: { seller_id: userData.id },
         sort: '-created_at',
         limit: 100,
       });

@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import Header from '@/components/Header';
 import { client } from '@/lib/api';
+import { resilientAuth, resilientQuery, resilientQueryAll } from '@/lib/resilient-client';
 import { toast } from 'sonner';
 import {
   AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid,
@@ -132,14 +133,14 @@ export default function VendorAnalytics() {
 
   const loadAllData = useCallback(async (showToast = false) => {
     try {
-      const userRes = await client.auth.me();
-      if (!userRes?.data) {
+      const userData = await resilientAuth();
+      if (!userData) {
         navigate('/vendor/signup');
         return;
       }
-      const userId = userRes.data.id;
+      const userId = userData.id;
 
-      const vendorRes = await client.entities.vendors.query({ query: {} });
+      const vendorRes = await resilientQuery('vendors', { query: {} });
       const vendors = vendorRes?.data?.items || [];
       if (vendors.length === 0) {
         navigate('/vendor/signup');
@@ -147,20 +148,20 @@ export default function VendorAnalytics() {
       }
       setCommissionRate(vendors[0].commission_rate || 15);
 
-      const ordersRes = await client.entities.orders.queryAll({
+      const ordersRes = await resilientQueryAll('orders', {
         query: { seller_id: userId },
         sort: '-created_at',
         limit: 2000,
       });
       setOrders(ordersRes?.data?.items || []);
 
-      const prodRes = await client.entities.products.query({
+      const prodRes = await resilientQuery('products', {
         query: { seller_id: userId },
         limit: 200,
       });
       setProducts(prodRes?.data?.items || []);
 
-      const viewsRes = await client.entities.product_views.queryAll({
+      const viewsRes = await resilientQueryAll('product_views', {
         query: { seller_id: userId },
         sort: '-viewed_at',
         limit: 2000,
