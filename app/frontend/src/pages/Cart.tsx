@@ -9,6 +9,7 @@ import { toast } from 'sonner';
 import Header from '@/components/Header';
 import { client } from '@/lib/api';
 import { withRetry } from '@/lib/retry';
+import { formatPrice } from '@/lib/currency';
 
 interface CartItem {
   id: number | string;
@@ -311,10 +312,10 @@ export default function Cart() {
                             {item.product?.category} · {item.product?.condition}
                           </p>
                           <p className="text-sm text-slate-500 mt-0.5">
-                            ${(item.product?.price || 0).toFixed(2)} each
+                            {formatPrice(item.product?.price || 0)} each
                           </p>
                           <p className="text-lg font-bold text-emerald-400 mt-2">
-                            ${((item.product?.price || 0) * item.quantity).toFixed(2)}
+                            {formatPrice((item.product?.price || 0) * item.quantity)}
                           </p>
                         </div>
                         <div className="flex flex-col items-end justify-between">
@@ -360,7 +361,7 @@ export default function Cart() {
                   <div className="space-y-2">
                     <div className="flex justify-between text-sm">
                       <span className="text-slate-400">Selected Items ({selectedCount})</span>
-                      <span className="text-white">${selectedPrice.toFixed(2)}</span>
+                      <span className="text-white">{formatPrice(selectedPrice)}</span>
                     </div>
                     <div className="flex justify-between text-sm">
                       <span className="text-slate-400">Shipping</span>
@@ -369,7 +370,7 @@ export default function Cart() {
                           ? '--'
                           : shippingCost === 0
                           ? 'Free'
-                          : `$${shippingCost.toFixed(2)}`}
+                          : formatPrice(shippingCost)}
                       </span>
                     </div>
                   </div>
@@ -377,7 +378,7 @@ export default function Cart() {
                   <div className="flex justify-between font-bold text-lg">
                     <span>Total</span>
                     <span className="text-emerald-400">
-                      ${(selectedPrice + shippingCost).toFixed(2)}
+                      {formatPrice(selectedPrice + shippingCost)}
                     </span>
                   </div>
                   <Button
@@ -388,7 +389,7 @@ export default function Cart() {
                     Proceed to Checkout ({selectedIds.size} item{selectedIds.size !== 1 ? 's' : ''})
                   </Button>
                   <p className="text-xs text-slate-500 text-center">
-                    Free shipping on orders over $50
+                    Free shipping on orders over AED 50
                   </p>
                 </CardContent>
               </Card>

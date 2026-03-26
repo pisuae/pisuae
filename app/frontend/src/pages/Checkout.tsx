@@ -458,7 +458,7 @@ export default function Checkout() {
                 {paymentMethod === 'cod' && (
                   <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-4">
                     <p className="text-sm text-amber-300">
-                      💵 You will pay <span className="font-bold">${grandTotal.toFixed(2)}</span> in cash when your order is delivered.
+                      💵 You will pay <span className="font-bold">AED {grandTotal.toFixed(2)}</span> in cash when your order is delivered.
                     </p>
                   </div>
                 )}
@@ -498,7 +498,7 @@ export default function Checkout() {
                         <p className="text-xs text-slate-400">Qty: {item.quantity}</p>
                       </div>
                       <p className="text-sm font-semibold text-emerald-400">
-                        ${((item.product?.price || 0) * item.quantity).toFixed(2)}
+                        AED {((item.product?.price || 0) * item.quantity).toFixed(2)}
                       </p>
                     </div>
                   ))}

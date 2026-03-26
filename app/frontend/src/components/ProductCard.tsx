@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { resolveImageUrl } from '@/lib/image';
+import { formatPrice } from '@/lib/currency';
 
 interface Product {
   id: number;
@@ -109,7 +110,7 @@ export default function ProductCard({ product, onAddToCart, rating }: ProductCar
         {rating && <StarRating rating={rating.average_rating} count={rating.review_count} />}
         <div className="flex items-center justify-between pt-1">
           <span className="text-lg font-bold text-emerald-400">
-            ${product.price.toFixed(2)}
+            {formatPrice(product.price)}
           </span>
           <Button
             size="sm"
